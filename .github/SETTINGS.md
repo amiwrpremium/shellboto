@@ -101,9 +101,11 @@ appear. Then continue below.
 
 - [ ] `HOMEBREW_TAP_GITHUB_TOKEN` *(optional, add when ready to
       publish Homebrew)*:
-  - Create the `amiwrpremium/homebrew-shellboto` tap repo first
-    (empty, public).
-  - Generate a fine-grained PAT scoped to **only that repo**,
+  - Use your existing `amiwrpremium/homebrew-tap` repo (a single
+    tap can host every formula across all your projects). If you
+    don't have one yet, create an empty public repo with that
+    name; goreleaser populates it on first release.
+  - Generate a fine-grained PAT scoped to **only that one repo**,
     **Contents: Read and write**.
   - Paste as the secret value.
   - Without the secret, goreleaser silently skips the tap push; the

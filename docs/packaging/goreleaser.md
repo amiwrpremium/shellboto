@@ -102,7 +102,7 @@ brews:
   - name: shellboto
     repository:
       owner: amiwrpremium
-      name: homebrew-shellboto
+      name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: https://github.com/amiwrpremium/shellboto

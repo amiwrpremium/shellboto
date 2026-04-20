@@ -47,7 +47,7 @@ reminds you to do it.
    - Allow auto-merge (for dependabot-auto-merge.yml).
    - Auto-delete head branches.
 7. **Optional: Homebrew tap secret**:
-   - Create the `amiwrpremium/homebrew-shellboto` repo (empty,
+   - Create the `amiwrpremium/homebrew-tap` repo (empty,
      public).
    - Generate a fine-grained PAT: Contents: R/W on that one
      repo, no other perms.

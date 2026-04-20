@@ -2,7 +2,7 @@
 #
 # This file is published in the repo as scaffolding; for a real
 # `brew install amiwrpremium/shellboto/shellboto` flow, mirror it into a
-# tap repo (e.g. github.com/amiwrpremium/homebrew-shellboto) and keep the
+# tap repo (e.g. github.com/amiwrpremium/homebrew-tap) and keep the
 # sha256 + url fields updated per release.
 
 class Shellboto < Formula

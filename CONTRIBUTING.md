@@ -107,7 +107,7 @@ You don't tag by hand; you merge a PR.
 4. **`release.yml` fires on the tag** → goreleaser publishes:
    - `linux/amd64` + `linux/arm64` + `darwin/*` binaries + tarballs
    - `.deb` and `.rpm` packages for Linux
-   - Homebrew formula pushed to `amiwrpremium/homebrew-shellboto`
+   - Homebrew formula pushed to `amiwrpremium/homebrew-tap`
      (if the `HOMEBREW_TAP_GITHUB_TOKEN` repo secret is set)
    - `checksums.txt`
    - CycloneDX SBOMs per archive

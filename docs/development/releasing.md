@@ -128,7 +128,7 @@ Takes ~1–2 minutes.
 - Binaries on GitHub Releases page.
 - `.deb` + `.rpm` in assets.
 - Homebrew formula (if tap token set) committed to
-  `amiwrpremium/homebrew-shellboto`.
+  `amiwrpremium/homebrew-tap`.
 - CHANGELOG.md on master has the new section.
 - `.release-please-manifest.json` updated to the new version.
 

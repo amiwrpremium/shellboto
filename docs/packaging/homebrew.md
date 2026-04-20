@@ -14,31 +14,45 @@ Useful when you administer a Linux VPS from a macOS workstation
 
 ## Tap setup (one-time)
 
+A single Homebrew tap can host every formula you ever publish —
+that's the whole design of taps. shellboto uses
+`amiwrpremium/homebrew-tap` (the operator's existing tap; the
+`homebrew-` prefix is required by Homebrew's tap discovery, the
+short tap name is `tap`).
+
 For the operator:
 
-1. Create an empty public repo `amiwrpremium/homebrew-shellboto`
-   on GitHub. Don't add any files; goreleaser populates it.
+1. **If you don't already have a tap repo**: create an empty
+   public repo `amiwrpremium/homebrew-tap` on GitHub. Don't add
+   any files; goreleaser populates it. If you already have one
+   (e.g. for other projects), you're done with this step.
 2. Generate a fine-grained PAT:
-   - Resource: `amiwrpremium/homebrew-shellboto` only.
+   - Resource: `amiwrpremium/homebrew-tap` only.
    - Permissions: Contents: R/W.
    - Expiration: ≤ 1 year.
 3. Add as `HOMEBREW_TAP_GITHUB_TOKEN` repo secret on the
    `shellboto` repo.
 
-Once set, every release pushes a new formula file to the tap.
+Once set, every shellboto release pushes
+`Formula/shellboto.rb` into the tap. Other projects can write to
+`Formula/<their-name>.rb` in the same tap independently.
 
 ## Install (user-facing)
 
 ```bash
-brew tap amiwrpremium/shellboto
+brew tap amiwrpremium/tap
 brew install shellboto
 ```
 
-Or in one line (when the formula name matches the tap's repo):
+Or in one line (combining tap + install):
 
 ```bash
-brew install amiwrpremium/shellboto/shellboto
+brew install amiwrpremium/tap/shellboto
 ```
+
+The `amiwrpremium/tap/...` shorthand is `<owner>/<short-tap-name>/<formula>`.
+The short tap name is the part after `homebrew-` in the repo
+name — so `homebrew-tap` becomes just `tap` in the URL.
 
 ## Upgrade
 

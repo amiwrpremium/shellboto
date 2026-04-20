@@ -69,7 +69,7 @@ files are ready to drop into whichever you choose.
 ## Homebrew tap
 
 The `brews:` block in `.goreleaser.yaml` pushes `shellboto.rb` to
-`amiwrpremium/homebrew-shellboto` on each release, **if** the
+`amiwrpremium/homebrew-tap` on each release, **if** the
 `HOMEBREW_TAP_GITHUB_TOKEN` repo secret is set with `repo` scope on
 the tap repo. Without the secret, the rest of the release still
 completes; only the tap push is skipped.

@@ -159,7 +159,7 @@ major bumps open individually.
 
 - `GITHUB_TOKEN` — provided automatically.
 - `HOMEBREW_TAP_GITHUB_TOKEN` — optional; fine-grained PAT
-  scoped to `amiwrpremium/homebrew-shellboto` for the Homebrew
+  scoped to `amiwrpremium/homebrew-tap` for the Homebrew
   tap push.
 
 No other secrets. No CI providers other than GitHub Actions.

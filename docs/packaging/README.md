@@ -22,7 +22,7 @@ On every tag push, goreleaser builds and publishes:
   env + unit + init scripts.
 - **Linux packages**: `.deb` + `.rpm` for amd64 + arm64.
 - **Homebrew formula**: pushed to
-  `amiwrpremium/homebrew-shellboto` tap repo (conditional).
+  `amiwrpremium/homebrew-tap` tap repo (conditional).
 - **Checksums file**: `checksums.txt` (SHA-256 per artifact).
 - **SBOMs**: CycloneDX per archive.
 - **GitHub Release**: page with Conventional-Commit-grouped notes.
