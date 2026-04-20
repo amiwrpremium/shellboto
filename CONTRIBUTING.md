@@ -144,6 +144,17 @@ edit the PR's CHANGELOG diff before merging it. After merge, further
 commits to `master` trigger release-please to rewrite it in the next
 release PR.
 
+## One-time GitHub setup
+
+See [`.github/SETTINGS.md`](./.github/SETTINGS.md) for the UI
+checklist: branch + tag protection, workflow permissions, code
+security toggles, optional secrets. Apply once on a fresh repo.
+
+## Incident procedures
+
+Runbooks for bad releases, leaked tokens, broken audit chains, and
+DB corruption live in [`docs/RUNBOOKS.md`](./docs/RUNBOOKS.md).
+
 ## Code style
 
 - `gofmt` + `goimports -local github.com/amiwrpremium/shellboto` — enforced.
