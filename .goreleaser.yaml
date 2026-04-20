@@ -1,0 +1,199 @@
+# goreleaser config for shellboto.
+#
+# Produces per-tag:
+#   - linux amd64+arm64 binaries, tar.gz archives
+#   - darwin amd64+arm64 binaries, tar.gz archives (CLI-only; bot itself
+#     is Linux-only per the runtime syscalls)
+#   - .deb + .rpm for linux amd64+arm64 via built-in nfpm
+#   - checksums.txt (SHA-256)
+#   - SBOM (CycloneDX) per archive
+#   - Homebrew formula pushed to the tap repo (gated on HOMEBREW_TAP_GITHUB_TOKEN)
+#   - GitHub release with Conventional-Commit-grouped notes
+#
+# Local smoke: `make release-snapshot` runs `goreleaser release --snapshot --clean`.
+# Config sanity: `make release-check` or `goreleaser check`.
+#
+# Docs: https://goreleaser.com/
+
+version: 2
+
+project_name: shellboto
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: shellboto
+    main: ./cmd/shellboto
+    binary: shellboto
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.gitSHA={{.ShortCommit}}
+      - -X main.built={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG.md
+      - deploy/config.example.toml
+      - deploy/config.example.yaml
+      - deploy/config.example.json
+      - deploy/env.example
+      - deploy/shellboto.service
+      - deploy/init/**/*
+
+# Linux packages. goreleaser embeds nfpm, so we reuse the same
+# pre/post scripts as the standalone nfpm config we replaced.
+nfpms:
+  - id: shellboto
+    package_name: shellboto
+    vendor: amiwrpremium
+    homepage: https://github.com/amiwrpremium/shellboto
+    maintainer: amiwrpremium <amiwrpremium@gmail.com>
+    description: |-
+      Telegram bot that gives whitelisted users a live bash shell on the VPS.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    section: admin
+    priority: optional
+    contents:
+      - src: deploy/config.example.toml
+        dst: /etc/shellboto/config.toml.example
+        type: config|noreplace
+        file_info:
+          mode: 0600
+      - src: deploy/env.example
+        dst: /etc/shellboto/env.example
+        type: config|noreplace
+        file_info:
+          mode: 0600
+      - src: deploy/shellboto.service
+        dst: /lib/systemd/system/shellboto.service
+        file_info:
+          mode: 0644
+    scripts:
+      postinstall: packaging/postinstall.sh
+      preremove: packaging/preremove.sh
+    overrides:
+      deb:
+        dependencies:
+          - systemd
+        recommends:
+          - openssl
+      rpm:
+        dependencies:
+          - systemd
+        recommends:
+          - openssl
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+
+# Homebrew tap publication. Skipped automatically when
+# HOMEBREW_TAP_GITHUB_TOKEN is not set (see release.yml conditional).
+brews:
+  - name: shellboto
+    repository:
+      owner: amiwrpremium
+      name: homebrew-shellboto
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/amiwrpremium/shellboto
+    description: "Telegram bot that gives whitelisted users a live bash shell on the VPS"
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@shellboto.dev
+    test: |
+      assert_match "shellboto", shell_output("#{bin}/shellboto -version")
+    caveats: |
+      shellboto uses Linux-only syscalls (Credential{Uid}, TIOCGPGRP, flock).
+      It builds on macOS but the non-root-shell isolation and the instance
+      lock rely on Linux semantics. Supported target is Linux (linuxbrew).
+
+      After install:
+        sudo install -d -m 0700 /etc/shellboto
+        sudo cp #{opt_prefix}/deploy/env.example         /etc/shellboto/env
+        sudo cp #{opt_prefix}/deploy/config.example.toml /etc/shellboto/config.toml
+        # Edit both, then:
+        shellboto doctor
+
+# Release notes are driven by Conventional Commits; goreleaser groups
+# by type prefix automatically.
+changelog:
+  use: git
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Refactors
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: Build & CI
+      regexp: '^.*?(build|ci)(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: Tests
+      regexp: '^.*?test(\([[:word:]]+\))??!?:.+$'
+      order: 6
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^chore:'
+      - '^style:'
+      - merge conflict
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+release:
+  github:
+    owner: amiwrpremium
+    name: shellboto
+  draft: false
+  prerelease: auto
+  name_template: "shellboto {{ .Tag }}"
+  header: |
+    ## shellboto {{ .Version }}
+
+    Install via .deb/.rpm (see assets below) or `sudo ./deploy/install.sh`
+    after unpacking the archive.
+  footer: |
+    **Full changelog**: https://github.com/amiwrpremium/shellboto/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# TODO: Artifact signing via cosign is supported via a `signs:` block.
+# Requires COSIGN_PASSWORD + a key pair; enable later when the release
+# process is settled.
