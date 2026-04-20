@@ -8,10 +8,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Required by install_file / install_dir in lib.sh. We don't actually
-# call those in the unit tests, but lib.sh references $DRY_RUN.
-DRY_RUN=false
+# call those in the unit tests, but lib.sh references $DRY_RUN — export
+# so shellcheck sees the cross-script use.
+export DRY_RUN=false
 
-# shellcheck source=deploy/lib.sh
+# shellcheck disable=SC1091 source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
 fails=0

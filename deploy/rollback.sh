@@ -13,7 +13,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck source=deploy/lib.sh
+# shellcheck disable=SC1091 source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
 # ---------------------------------------------------------------------------
