@@ -1,0 +1,156 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint (gofmt + goimports + golangci-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt diff
+        run: |
+          out=$(gofmt -l .)
+          if [[ -n "$out" ]]; then
+            echo "::error::gofmt reports unformatted files:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: install goimports
+        run: go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: goimports diff
+        run: |
+          out=$(goimports -l -local github.com/amiwrpremium/shellboto .)
+          if [[ -n "$out" ]]; then
+            echo "::error::goimports reports unformatted files:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=3m
+
+  test:
+    name: test (go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.25", "stable"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+      - run: go test -count=1 -timeout 60s ./...
+
+  vet:
+    name: vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: govulncheck ./...
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "./deploy"
+          additional_files: |
+            packaging/postinstall.sh
+            packaging/preremove.sh
+            scripts/commit-msg-check.sh
+            scripts/install-dev-tools.sh
+            deploy/init/openrc/shellboto
+            deploy/init/runit/shellboto/run
+            deploy/init/runit/shellboto/log/run
+
+  gitleaks:
+    name: gitleaks (full repo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  commit-lint:
+    name: commit-lint (Conventional Commits)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: validate every commit in the PR
+        run: |
+          base=${{ github.event.pull_request.base.sha }}
+          head=${{ github.event.pull_request.head.sha }}
+          fail=0
+          for sha in $(git rev-list "$base..$head"); do
+            msg=$(git show -s --format=%B "$sha")
+            tmp=$(mktemp)
+            printf '%s\n' "$msg" > "$tmp"
+            if ! bash scripts/commit-msg-check.sh "$tmp" 2>&1; then
+              echo "::error::commit $sha has a non-conventional message"
+              fail=1
+            fi
+            rm -f "$tmp"
+          done
+          exit $fail
+
+  goreleaser-check:
+    name: goreleaser check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: check
