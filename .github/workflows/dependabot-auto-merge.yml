@@ -1,0 +1,38 @@
+name: dependabot-auto-merge
+
+# Auto-queues a squash merge for dependabot PRs that are patch-level
+# bumps AND are NOT labelled `security`. Minor + major bumps always
+# stay for human review; security-labelled patches also stay for
+# human review — shellboto handles root shells and bot tokens, so a
+# silent auto-merge of an "urgent security" patch is exactly what we
+# don't want.
+#
+# `gh pr merge --auto` queues the merge behind required status
+# checks — branch protection is the hard gate. If CI fails, the PR
+# never merges.
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: fetch metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: auto-merge safe patch bumps
+        if: |
+          steps.meta.outputs.update-type == 'version-update:semver-patch' &&
+          !contains(github.event.pull_request.labels.*.name, 'security')
+        run: gh pr merge --auto --squash "$PR"
+        env:
+          PR: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
