@@ -1,0 +1,60 @@
+# Go build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+
+# Coverage
+coverage.out
+coverage.html
+coverage.txt
+*.cover
+
+# Go workspace files (local only)
+go.work
+go.work.sum
+
+# Vendoring (not used — modules are cached by the toolchain)
+/vendor/
+
+# Binaries produced by this project
+/shellboto
+/cmd/shellboto/shellboto
+/bin/
+/dist/
+/build/
+
+# SQLite state (local dev; the real DB lives under /var/lib/shellboto)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# Secrets / local overrides (deploy/env.example is the committed template)
+.env
+.env.local
+/config.toml
+/config.local.toml
+
+# Logs
+*.log
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
