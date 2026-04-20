@@ -1,0 +1,21 @@
+#!/bin/execlineb -P
+# s6 longrun for shellboto.
+#
+# Install (assuming s6-rc source tree at /etc/s6-rc/source):
+#   sudo mkdir -p /etc/s6-rc/source/shellboto
+#   sudo install -m 0755 deploy/init/s6/shellboto/run  /etc/s6-rc/source/shellboto/run
+#   sudo install -m 0644 deploy/init/s6/shellboto/type /etc/s6-rc/source/shellboto/type
+#   sudo s6-rc-compile /etc/s6-rc/compiled /etc/s6-rc/source
+#   sudo s6-rc-update  /etc/s6-rc/compiled
+#   sudo s6-rc -u change shellboto
+#
+# Pair with `sudo ./deploy/install.sh --skip-systemd`.
+
+# Redirect stderr to stdout so s6-log catches both streams.
+fdmove -c 2 1
+# Load env vars; s6-envdir expects one-file-per-var but we keep a single
+# env file for parity with systemd — shim through a trivial bash loader.
+execlineb -c {
+    importas -i HOME HOME
+    /bin/sh -c "set -a && . /etc/shellboto/env && exec /usr/local/bin/shellboto -config /etc/shellboto/config.toml"
+}

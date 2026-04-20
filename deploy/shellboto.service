@@ -1,0 +1,70 @@
+[Unit]
+Description=shellboto — Telegram shell bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/shellboto/env
+ExecStart=/usr/local/bin/shellboto -config /etc/shellboto/config.toml
+StateDirectory=shellboto
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=3s
+StandardOutput=journal
+StandardError=journal
+
+# ---- Targeted sandboxing --------------------------------------------
+# Directives below narrow the blast radius of a bot-process RCE without
+# breaking admin workflows. Only directives that do NOT interfere with
+# legitimate admin shell operations (apt-get, mount, modprobe, docker,
+# etc.) are enabled; the intentionally-absent ones are listed below.
+
+# Block privilege *gain* via setuid binaries. Dropping privileges via
+# Credential{Uid} for user-role shells still works — NNP only
+# restricts gaining.
+NoNewPrivileges=yes
+
+# The bot doesn't create suid/sgid files; enforce that via seccomp.
+RestrictSUIDSGID=yes
+
+# No personality switches (no 32/64-bit ABI flips).
+LockPersonality=yes
+
+# Shellboto never uses realtime scheduling.
+RestrictRealtime=yes
+
+# Native-arch syscalls only. Blocks the x32 / i386 compat layer, a
+# common seccomp-bypass path.
+SystemCallArchitectures=native
+
+# Fork-bomb containment. Covers bot + every spawned bash + descendants.
+# A fork bomb inside a user shell saturates long before the host does.
+# Raise if you run heavy parallel ops workloads.
+TasksMax=500
+
+# ---- Intentionally NOT set (would break "control the whole system") ----
+# The following directives are deliberately NOT enabled because they
+# would cripple legitimate admin shell operations. Enable any of them
+# only if your deployment's admin shells don't need the corresponding
+# capability.
+#
+#   ProtectSystem=strict      # admins may apt-get install / write /etc
+#   ProtectHome=yes           # admins read /root, /home
+#   PrivateTmp=yes            # admins expect shared /tmp
+#   PrivateDevices=yes        # admins access /dev/sd*, /dev/nvme*
+#   PrivateNetwork=yes        # admins need full network
+#   PrivateUsers=yes          # interferes with the Credential{Uid} path
+#   CapabilityBoundingSet=    # admins need full root capabilities
+#   ProtectKernelTunables=yes # admins may sysctl -w
+#   ProtectKernelModules=yes  # admins may modprobe
+#   ProtectKernelLogs=yes     # admins read /dev/kmsg
+#   ProtectProc=invisible     # breaks ps / free / /proc/meminfo
+#   ProcSubset=pid            # same as above
+#   RestrictNamespaces=yes    # admins run docker / unshare
+#   DeviceAllow=/DenyList     # admins access raw devices
+#   SystemCallFilter=         # brittle against arbitrary shell commands
+
+[Install]
+WantedBy=multi-user.target

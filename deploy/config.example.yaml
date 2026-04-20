@@ -1,0 +1,48 @@
+# /etc/shellboto/config.yaml  (mode 0600, root:root)
+#
+# YAML variant of config.example.toml. Same keys, same semantics —
+# choose whichever format you prefer. Extension drives parser
+# (.yaml / .yml → YAML, .toml → TOML, .json → JSON).
+
+db_path: /var/lib/shellboto/state.db
+audit_retention: 2160h      # 90d
+default_timeout: 5m
+heartbeat: 30s
+max_message_chars: 4096
+edit_interval: 1s
+idle_reap: 1h
+confirm_ttl: 60s
+kill_grace: 5s
+queue_while_busy: true
+log_rejected: false
+extra_danger_patterns: []
+log_format: json
+log_level: info
+
+# Unprivileged Unix account for user-role pty shells.
+# Empty = fall back to root (dev mode, warning at startup).
+user_shell_user: ""
+user_shell_home: ""
+
+# Paranoia: reject any command with non-printable-ASCII bytes.
+strict_ascii_commands: false
+
+# Per-command in-memory output buffer cap (bytes). 0 = unlimited.
+max_output_bytes: 52428800   # 50 MiB
+
+# audit_output_mode: always | errors_only | never
+audit_output_mode: always
+
+# Post-redact output blob cap. 0 = unbounded.
+audit_max_blob_bytes: 52428800
+
+# Main per-user rate limiter (post-auth).
+rate_limit_burst: 10
+rate_limit_refill_per_sec: 1.0
+
+# Super-notification inline-button TTL (0 = never expire).
+super_notify_action_ttl: 10m
+
+# Pre-auth rate limiter for auth_reject writes (anti-DoS).
+auth_reject_burst: 5
+auth_reject_refill_per_sec: 0.05

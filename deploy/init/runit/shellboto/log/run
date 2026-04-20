@@ -1,0 +1,4 @@
+#!/bin/sh
+# runit log service — pipes shellboto's stdout/stderr into svlogd so
+# journald isn't required on runit-native systems.
+exec svlogd -tt /var/log/shellboto

@@ -1,0 +1,23 @@
+#!/bin/sh
+# shellcheck disable=SC1091  # /etc/shellboto/env materialises at install time
+# runit run script for shellboto.
+#
+# Install:
+#   sudo mkdir -p /etc/sv/shellboto /etc/sv/shellboto/log
+#   sudo install -m 0755 deploy/init/runit/shellboto/run         /etc/sv/shellboto/run
+#   sudo install -m 0755 deploy/init/runit/shellboto/log/run     /etc/sv/shellboto/log/run
+#   sudo ln -s /etc/sv/shellboto /var/service/shellboto
+#
+# Pair with `sudo ./deploy/install.sh --skip-systemd`.
+
+# Drop into foreground; runit reaps + restarts on exit.
+exec 2>&1
+
+# Export every KEY=VAL from the env file. `chpst -e DIR` would be more
+# idiomatic but requires one-var-per-file; keeping a single env file so
+# operators use the same path as the systemd unit.
+set -a
+. /etc/shellboto/env
+set +a
+
+exec /usr/local/bin/shellboto -config /etc/shellboto/config.toml

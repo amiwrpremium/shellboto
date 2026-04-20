@@ -1,0 +1,40 @@
+#!/sbin/openrc-run
+# shellcheck shell=sh
+# shellcheck disable=SC2034  # openrc reads these vars via its framework
+# shellcheck disable=SC1091  # /etc/shellboto/env materialises at install time
+# OpenRC init script for shellboto.
+#
+# Install:
+#   sudo install -m 0755 deploy/init/openrc/shellboto /etc/init.d/shellboto
+#   sudo rc-update add shellboto default
+#   sudo rc-service shellboto start
+#
+# Pair with `sudo ./deploy/install.sh --skip-systemd` which places the
+# binary + config + env but doesn't touch systemctl.
+
+name="shellboto"
+description="Telegram shell bot"
+command="/usr/local/bin/shellboto"
+command_args="-config /etc/shellboto/config.toml"
+command_user="root"
+command_background="yes"
+pidfile="/run/${name}.pid"
+output_log="/var/log/${name}.log"
+error_log="/var/log/${name}.log"
+
+depend() {
+    need net
+    after localmount
+}
+
+start_pre() {
+    if [ ! -r /etc/shellboto/env ]; then
+        eerror "missing /etc/shellboto/env — run deploy/install.sh first"
+        return 1
+    fi
+    # Export every KEY=VAL in env for the child. OpenRC doesn't have an
+    # EnvironmentFile= equivalent built in.
+    set -a
+    . /etc/shellboto/env
+    set +a
+}

@@ -1,0 +1,148 @@
+# /etc/shellboto/config.toml  (mode 0600, root:root)
+
+# SQLite state file (users + audit log). systemd's StateDirectory= creates
+# /var/lib/shellboto for you; the bot chmods the DB file to 0600 on open.
+db_path = "/var/lib/shellboto/state.db"
+
+# Audit rows older than this are pruned hourly.
+audit_retention = "2160h"  # 90d
+
+# Auto-interrupt a command running longer than this.
+default_timeout  = "5m"
+
+# Send a "still running" heartbeat every N seconds while a command runs.
+heartbeat        = "30s"
+
+# Max characters per Telegram message. Telegram's hard cap is 4096
+# (UTF-16 code units, counted post HTML-escape). When a command's output
+# exceeds the current message's remaining room, shellboto rolls over to a
+# new message at the last newline (fallback: last space, fallback: hard cut).
+max_message_chars = 4096
+
+# How often the streaming message is edited with fresh output.
+edit_interval     = "1s"
+
+# Per-user shells with no activity for this long are reaped.
+idle_reap        = "1h"
+
+# How long a dangerous-command /confirm token remains valid.
+confirm_ttl      = "60s"
+
+# After a timeout, wait this long between SIGINT and SIGKILL.
+kill_grace       = "5s"
+
+# If a command is already running and another arrives, queue it (true) or
+# reject it with a note (currently only "reject with note" is implemented
+# — this flag is reserved).
+queue_while_busy = true
+
+# Log rejected (non-whitelisted) updates to journald. Leaves the sender
+# unaware the bot saw their message.
+log_rejected     = false
+
+# Additional regex patterns (beyond the built-in defaults) that require
+# /confirm before execution.
+extra_danger_patterns = []
+
+# zap logger: "json" for structured (recommended under systemd) or
+# "console" for human-readable colored output.
+log_format = "json"
+
+# zap level: debug | info | warn | error
+log_level  = "info"
+
+# Unprivileged Unix account that `user`-role pty shells spawn as.
+# Leave empty for dev mode → user-role shells run as root (visible warning
+# at startup). In production, create a dedicated account with no sudoers
+# entry and point this at it:
+#
+#   useradd --system --shell /bin/bash shellboto-user
+#   mkdir -p /home/shellboto-user
+#   chown shellboto-user:shellboto-user /home/shellboto-user
+#   chmod 0755 /home/shellboto-user
+#
+# admin / superadmin shells are always root regardless of this setting.
+user_shell_user = ""
+
+# Base directory for per-telegram-user home dirs when user_shell_user is
+# set. Empty = /home/<user_shell_user>. Each whitelisted user-role caller
+# gets their own subdir under this path (mode 0700, chown to the unix user).
+user_shell_home = ""
+
+# When true, any command containing bytes outside printable ASCII (plus
+# tab / newline / CR) is rejected with a clear error. Useful as a
+# paranoia layer against unicode homoglyph attempts and weird control
+# bytes in the audit log. Breaks legitimate unicode usage (accented
+# filenames, i18n data), so default is false.
+strict_ascii_commands = false
+
+# Per-command in-memory output buffer cap. When exceeded, the foreground
+# process is SIGKILL'd and the partial output is kept. Protects against
+# `cat /dev/urandom` / `yes` style OOM. 0 = unlimited (not recommended).
+# Default: 50 MiB.
+max_output_bytes = 52428800
+
+# audit_output_mode controls whether command stdout/stderr is persisted
+# in the audit log:
+#   "always"      — store every command's output (default, most forensic)
+#   "errors_only" — store output only when exit code != 0
+#   "never"       — never store output (most private; loses forensics)
+#
+# Regardless of mode, `cmd` and (when stored) output are always passed
+# through the built-in redactor — it scrubs common token / password /
+# private-key shapes with [REDACTED]. Redaction is best-effort and won't
+# catch novel secret formats; if your commands routinely handle
+# high-sensitivity secrets, prefer "never".
+audit_output_mode = "always"
+
+# Post-redact size cap on the stored output blob. Redacted output larger
+# than this is dropped from audit_outputs; the audit row still records
+# metadata and a detail flag `output_oversized`. Set lower than
+# max_output_bytes if you want runtime OOM protection at one cap and
+# DB-size protection at a stricter one. 0 = no separate cap.
+# Default: 52428800 (50 MiB).
+audit_max_blob_bytes = 52428800
+
+# Per-user token-bucket rate limit for commands & callbacks. Every
+# non-exempt handler invocation spends one token. /cancel, /kill, and
+# their inline-button equivalents (j:c / j:k) are exempt so users can
+# always interrupt a runaway command.
+#
+#   rate_limit_burst:          bucket capacity; 0 disables limiting entirely
+#   rate_limit_refill_per_sec: steady-state refill rate (tokens/sec)
+#
+# Defaults: burst=10, refill=1/sec → 60 actions/min per user, short
+# spikes absorbed. Raise for heavy ops deployments.
+rate_limit_burst          = 10
+rate_limit_refill_per_sec = 1.0
+
+# Pre-auth rate limiter for auth_reject audit writes. Prevents a
+# non-whitelisted attacker from filling the audit DB by spamming the
+# bot with messages or button taps — without this limit, Telegram's
+# ~30 updates/sec/bot ceiling translates to ~600 MB/day of audit-row
+# disk consumption.
+#
+# Applied BEFORE the main rate limiter, keyed by Telegram From-id
+# regardless of whether the sender is whitelisted. Over-limit
+# attempts are silently dropped: no log entry, no DB row.
+#
+# Defaults: burst=5 (5 immediate rows per attacker-ID), refill=0.05
+# /sec (one row per 20 seconds steady-state). A determined spammer
+# from one account writes ~4300 audit rows/day (~2 MB). burst=0
+# disables entirely — NOT recommended in production.
+auth_reject_burst          = 5
+auth_reject_refill_per_sec = 0.05
+
+# Super-admin notifications: user-lifecycle events (promote, demote,
+# add, remove, ban) DM the super AND the actor's direct promoter (or
+# adder, for user-role actors). Each DM carries inline quick-action
+# buttons — demote / ban / profile / etc. — that route into the same
+# confirm flows as the /users browser.
+#
+# super_notify_action_ttl caps how long those buttons stay tappable.
+# After the TTL elapses, a sweeper strips the inline keyboard via
+# EditMessageReplyMarkup so a notification sitting in chat for hours
+# can't be accidentally tapped. The event description text stays.
+# 0 disables the TTL (buttons persist until tapped).
+# Default: 10m.
+super_notify_action_ttl = "10m"

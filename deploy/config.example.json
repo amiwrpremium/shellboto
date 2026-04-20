@@ -1,0 +1,32 @@
+{
+  "db_path": "/var/lib/shellboto/state.db",
+  "audit_retention": "2160h",
+  "default_timeout": "5m",
+  "heartbeat": "30s",
+  "max_message_chars": 4096,
+  "edit_interval": "1s",
+  "idle_reap": "1h",
+  "confirm_ttl": "60s",
+  "kill_grace": "5s",
+  "queue_while_busy": true,
+  "log_rejected": false,
+  "extra_danger_patterns": [],
+  "log_format": "json",
+  "log_level": "info",
+
+  "user_shell_user": "",
+  "user_shell_home": "",
+
+  "strict_ascii_commands": false,
+  "max_output_bytes": 52428800,
+  "audit_output_mode": "always",
+  "audit_max_blob_bytes": 52428800,
+
+  "rate_limit_burst": 10,
+  "rate_limit_refill_per_sec": 1.0,
+
+  "super_notify_action_ttl": "10m",
+
+  "auth_reject_burst": 5,
+  "auth_reject_refill_per_sec": 0.05
+}
