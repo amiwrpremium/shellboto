@@ -26,6 +26,7 @@ paths = [
   '''internal/telegram/.*_test\.go''',
   '''cmd/shellboto/.*_test\.go''',
   '''internal/redact/redact_test\.go''',
+  '''docs/.*\.md''',
 ]
 
 # Regex-level allowlist: the 123456789:AAA_testtoken_* placeholder used
