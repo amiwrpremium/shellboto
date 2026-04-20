@@ -44,7 +44,12 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.1.0
+          version: v2.11.4
+          # Build from source so the binary compiles with the runner's
+          # Go toolchain (≥ 1.26). The prebuilt v2.x binaries on the
+          # release page are still built with go1.24, which refuses to
+          # load a config that targets a newer Go version.
+          install-mode: goinstall
           args: --timeout=3m
 
   test:
