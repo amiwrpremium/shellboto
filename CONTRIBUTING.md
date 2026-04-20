@@ -153,7 +153,7 @@ security toggles, optional secrets. Apply once on a fresh repo.
 ## Incident procedures
 
 Runbooks for bad releases, leaked tokens, broken audit chains, and
-DB corruption live in [`docs/RUNBOOKS.md`](./docs/RUNBOOKS.md).
+DB corruption live in [`docs/runbooks/`](./docs/runbooks/).
 
 ## Code style
 
