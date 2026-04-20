@@ -1,0 +1,53 @@
+name: codeql
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly scheduled scan. UTC Monday 05:00 matches dependabot's cadence.
+    - cron: "0 5 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [go]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # `security-and-quality` is a superset of the default
+          # `security-extended` pack — catches more real issues at
+          # modest compile-time cost. First-run alerts are expected
+          # against an existing codebase; see .github/SETTINGS.md.
+          queries: security-and-quality
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Autobuild handles `go build ./...` for us without needing a
+      # repo-specific build script. If autobuild ever breaks on a
+      # future layout change, replace with an explicit build step.
+      - uses: github/codeql-action/autobuild@v3
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
