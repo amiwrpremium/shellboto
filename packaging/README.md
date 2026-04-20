@@ -16,9 +16,11 @@ Packaging assets consumed by [goreleaser] at release time:
 ```bash
 make release-snapshot     # local dry-run; artifacts land in dist/
 make release-check        # lint + test + vet + vuln + goreleaser check
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin v0.1.0    # CI runs goreleaser release --clean
 ```
+
+Real releases are driven by release-please — merge the release PR on
+master and the tag it creates fires `release.yml` → goreleaser.
+See `CONTRIBUTING.md` for the full flow.
 
 After a release, `dist/` locally (or the GitHub release assets
 remotely) will contain:

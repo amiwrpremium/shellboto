@@ -261,9 +261,11 @@ make release-snapshot              # local dry-run of goreleaser
 ```
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
-Tag `v<major>.<minor>.<patch>` + `git push --tags` triggers the release
-pipeline (cross-platform binaries, .deb/.rpm, Homebrew tap push,
-GitHub release with Conventional-Commit-grouped notes).
+Releases are driven by [release-please](https://github.com/googleapis/release-please):
+land commits on `master` → release-please opens a PR that bumps the
+version + writes `CHANGELOG.md` → merge the PR → it tags
+automatically → `release.yml` runs goreleaser (cross-platform
+binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 
 ## Known limitations
 

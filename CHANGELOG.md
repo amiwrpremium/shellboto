@@ -1,8 +1,9 @@
 # CHANGELOG
 
-This file is generated from the Git commit history by `git-chglog`.
-**Do not hand-edit** — run `make changelog` (or let the release
-workflow regenerate it on tag push) and it'll be rewritten based on
-Conventional-Commit-formatted messages.
+This file is maintained by [release-please](https://github.com/googleapis/release-please).
+**Do not hand-edit on `master`.** release-please opens a "release PR"
+every time conventional commits worth releasing land on `master`; the
+PR's diff is where corrections go — edit the CHANGELOG entry in the
+release PR before merging it.
 
-The file will be populated on the first tagged release.
+The file will be populated on the first release PR merge.

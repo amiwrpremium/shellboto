@@ -1,0 +1,26 @@
+name: release-please
+
+# Runs on every push to master. If there are Conventional-Commit
+# worthy changes since the last tag, release-please opens or updates
+# a "release PR" bumping .release-please-manifest.json + CHANGELOG.md.
+# Merging that PR creates `v<x.y.z>`, which trips release.yml →
+# goreleaser.
+#
+# Docs: https://github.com/googleapis/release-please-action
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

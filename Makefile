@@ -11,7 +11,6 @@
 #   make version            → build + run -version to show the stamp
 #   make hooks-install      → wire lefthook into .git/hooks
 #   make hooks-uninstall    → remove lefthook Git hooks
-#   make changelog          → regenerate CHANGELOG.md via git-chglog
 #   make release-snapshot   → local goreleaser dry-run (no publish)
 #   make release-check      → lint + test + vet + vuln + goreleaser check
 #   make tarball            → project tarball at ../shellboto.tar.gz
@@ -31,7 +30,7 @@ LDFLAGS := -X main.version=$(VERSION) \
 BIN     := bin/shellboto
 STRIPPED := bin/shellboto-stripped
 
-.PHONY: all build build-stripped test fmt lint vet vuln version tarball clean help help-cli install uninstall rollback test-deploy hooks-install hooks-uninstall changelog release-snapshot release-check
+.PHONY: all build build-stripped test fmt lint vet vuln version tarball clean help help-cli install uninstall rollback test-deploy hooks-install hooks-uninstall release-snapshot release-check
 
 all: build
 
@@ -88,10 +87,6 @@ hooks-install: ## Wire lefthook into .git/hooks
 
 hooks-uninstall: ## Remove lefthook Git hooks
 	@command -v lefthook >/dev/null 2>&1 && lefthook uninstall || true
-
-changelog: ## Regenerate CHANGELOG.md from commit history
-	@command -v git-chglog >/dev/null 2>&1 || go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
-	git-chglog -o CHANGELOG.md
 
 release-snapshot: ## Local goreleaser dry-run; artifacts in dist/
 	@command -v goreleaser >/dev/null 2>&1 || go install github.com/goreleaser/goreleaser/v2@latest
