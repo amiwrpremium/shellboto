@@ -1,0 +1,20 @@
+# yamllint config — relaxed defaults for GitHub Actions + goreleaser.
+#
+# GitHub Actions workflows use `on:` which stock yamllint flags as
+# truthy-ambiguous; it isn't, in context. Document-start (`---`) is
+# optional; single-document YAML files don't need it. Line length
+# bumped to 120 — matches our Go linter.
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable

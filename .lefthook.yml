@@ -1,0 +1,107 @@
+# Git hook configuration for shellboto.
+#
+# lefthook installs Git hooks that call the commands below. Contributor
+# workflow:
+#   1. ./scripts/install-dev-tools.sh     (one-time; installs lefthook + others)
+#   2. make hooks-install                 (wires lefthook into .git/hooks)
+#
+# To bypass a failing hook in an emergency:  git commit --no-verify
+# CI will still catch you on the PR, so don't skip habitually.
+#
+# Docs: https://github.com/evilmartians/lefthook
+
+# ---------------------------------------------------------------------------
+# pre-commit: fast, staged-files-only checks. Runs parallel.
+# ---------------------------------------------------------------------------
+pre-commit:
+  parallel: true
+  commands:
+    gofmt:
+      glob: "*.go"
+      run: gofmt -l -w {staged_files}
+      stage_fixed: true
+
+    goimports:
+      glob: "*.go"
+      run: goimports -l -w -local github.com/amiwrpremium/shellboto {staged_files}
+      stage_fixed: true
+
+    golangci-lint:
+      glob: "*.go"
+      run: golangci-lint run --new-from-rev=HEAD --timeout=2m
+
+    gitleaks:
+      # Scans staged changes only. Full-repo scan runs in CI.
+      run: gitleaks protect --staged --redact --verbose
+
+    go-mod-tidy:
+      glob: "{go.mod,go.sum}"
+      # `go mod tidy -diff` is non-zero when tidy would change something.
+      run: go mod tidy -diff
+
+    shellcheck:
+      glob: "*.sh"
+      run: shellcheck {staged_files}
+
+    shellcheck-init-run:
+      # runit "run" scripts — POSIX sh. s6's run is execlineb, not a
+      # shell script, so it's deliberately excluded.
+      glob: "deploy/init/runit/**/run"
+      run: shellcheck {staged_files}
+
+    shellcheck-init-openrc:
+      # OpenRC init script — named after the service, not `run`.
+      glob: "deploy/init/openrc/shellboto"
+      run: shellcheck {staged_files}
+
+    yamllint:
+      glob: "*.{yml,yaml}"
+      run: yamllint -s {staged_files}
+
+# ---------------------------------------------------------------------------
+# commit-msg: validates Conventional Commits format.
+# ---------------------------------------------------------------------------
+commit-msg:
+  commands:
+    conventional-commits:
+      run: bash scripts/commit-msg-check.sh {1}
+
+# ---------------------------------------------------------------------------
+# pre-push: slower, full-tree checks. Runs serially so a failure is easy
+# to spot in the output.
+# ---------------------------------------------------------------------------
+pre-push:
+  parallel: false
+  commands:
+    test:
+      run: go test -count=1 -timeout 60s ./...
+
+    vet:
+      run: go vet ./...
+
+    vuln:
+      run: govulncheck ./...
+
+    goreleaser-check:
+      # Validates .goreleaser.yaml — catches bad release config before a
+      # tag push fires the release workflow.
+      run: goreleaser check
+
+# ---------------------------------------------------------------------------
+# post-merge / post-checkout: warn if .lefthook.yml itself changed so
+# the developer re-runs `make hooks-install` to pick up any newly
+# declared hook types. Lefthook reloads its config per invocation, but
+# a *new hook type* has to be wired into .git/hooks to fire at all.
+# ---------------------------------------------------------------------------
+post-merge:
+  commands:
+    lefthook-drift-check:
+      run: scripts/lefthook-drift-check.sh
+
+post-checkout:
+  commands:
+    lefthook-drift-check:
+      # {3} is the branch-flag arg git passes to post-checkout: 1 for
+      # branch changes, 0 for file checkouts. The script exits 0 on
+      # file checkouts to stay quiet.
+      run: scripts/lefthook-drift-check.sh {3}

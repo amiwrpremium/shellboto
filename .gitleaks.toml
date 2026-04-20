@@ -1,0 +1,38 @@
+# gitleaks config for shellboto.
+#
+# Extends the default ruleset with a Telegram-bot-token-specific rule,
+# and allow-lists the fake example tokens used in deploy/env.example and
+# the smoke-test fixtures. Real leaks stay blocked.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id          = "telegram-bot-token"
+description = "Telegram bot token (from @BotFather)"
+# Telegram tokens look like: <numeric-bot-id>:AA<33-base64url-chars>
+# We use a slightly relaxed tail to tolerate format variations (36+ chars).
+regex       = '''[0-9]{6,12}:AA[A-Za-z0-9_-]{33,}'''
+tags        = ["secret", "telegram"]
+
+[allowlist]
+description = "Fixture tokens and example placeholders used in this repo."
+
+# Files that legitimately contain example-shaped tokens.
+paths = [
+  '''deploy/env\.example''',
+  '''deploy/install\.sh''',
+  '''deploy/lib_test\.sh''',
+  '''internal/telegram/.*_test\.go''',
+  '''cmd/shellboto/.*_test\.go''',
+  '''internal/redact/redact_test\.go''',
+]
+
+# Regex-level allowlist: the 123456789:AAA_testtoken_* placeholder used
+# in install-script smoke tests, and the deploy/env.example placeholder
+# that contains literally "REPLACE_ME_WITH_YOUR_BOT_TOKEN".
+regexes = [
+  '''123456789:AAA_testtoken_[A-Za-z0-9_-]+''',
+  '''123456789:AA[A-Za-z0-9_-]+''',
+  '''REPLACE_ME_WITH_YOUR_BOT_TOKEN''',
+]
