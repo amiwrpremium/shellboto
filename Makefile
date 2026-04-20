@@ -101,7 +101,7 @@ release-check: ## Pre-release sanity gate (lint + test + vet + vuln + goreleaser
 	goreleaser check
 
 tarball: ## Tar+gzip the project (sibling to the project dir)
-	tar --exclude='*.db' --exclude='*.db-*' --exclude='*.sqlite*' \
+	tar --exclude='.git' --exclude='*.db' --exclude='*.db-*' --exclude='*.sqlite*' \
 	    --exclude='shellboto.lock' --exclude='.DS_Store' \
 	    --exclude='bin' --exclude='dist' \
 	    -czf ../shellboto.tar.gz -C .. shellboto
