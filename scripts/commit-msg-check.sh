@@ -28,11 +28,14 @@ esac
 # Conventional Commits 1.0:
 #   <type>(<scope>)!: <description>
 # <type>:  one of feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
-# <scope>: optional, lowercase identifier + hyphen
+# <scope>: optional, lowercase identifier + hyphen. Multiple parenthesised
+#          scope groups allowed so dependabot's `chore(ci)(deps): …` form
+#          (where the repo-set prefix and dependabot's own `(deps)` stack)
+#          passes without rewriting every existing PR.
 # !:       optional, marks a breaking change
 # <description>: 1-72 chars after ": "
 TYPE_RE='(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)'
-SCOPE_RE='(\([a-z0-9-]+\))?'
+SCOPE_RE='(\([a-z0-9-]+\))*'
 BREAK_RE='!?'
 REGEX="^${TYPE_RE}${SCOPE_RE}${BREAK_RE}: .{1,72}$"
 
