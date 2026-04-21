@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.1](https://github.com/amiwrpremium/shellboto/compare/v0.1.0...v0.1.1) (2026-04-21)
+
+
+### Bug fixes
+
+* **ci:** commit-msg regex accepts multiple parenthesised scopes ([#10](https://github.com/amiwrpremium/shellboto/issues/10)) ([fa8a3ff](https://github.com/amiwrpremium/shellboto/commit/fa8a3ff3346a1205c1ac046195a840189e328256))
+* **codeql:** check Close() on writable file handles ([#13](https://github.com/amiwrpremium/shellboto/issues/13)) ([43c0b80](https://github.com/amiwrpremium/shellboto/commit/43c0b804c81186a8736ffd78d6e068855868832f))
+
+
+### CI
+
+* **release-please:** authenticate via RELEASE_PLEASE_TOKEN PAT ([#14](https://github.com/amiwrpremium/shellboto/issues/14)) ([7434055](https://github.com/amiwrpremium/shellboto/commit/7434055efa403f41154d9f994bed832cd52b13de))
+
 ## 0.1.0 (2026-04-20)
 
 
