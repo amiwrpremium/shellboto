@@ -171,7 +171,13 @@ func cmdDBVacuum(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return exitErr
 	}
-	defer lock.Close()
+	// Lockfile is never written — only flock'd. Close() returning an error
+	// is unexpected; surface it rather than silently defer.
+	defer func() {
+		if err := lock.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "lockfile close: %v\n", err)
+		}
+	}()
 
 	gormDB, cleanup, err := openDBForCLI(cfg.DBPath)
 	if err != nil {

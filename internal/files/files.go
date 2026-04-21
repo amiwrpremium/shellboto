@@ -123,7 +123,6 @@ func Receive(ctx context.Context, b *bot.Bot, doc *models.Document, caption stri
 	if err != nil {
 		return "", 0, fmt.Errorf("open dest: %w", err)
 	}
-	defer out.Close()
 	// Defense-in-depth — Telegram's bot API caps uploads at
 	// 50 MB, but a misconfigured self-hosted bot API server (or a
 	// future protocol change) could serve larger. Bound the Copy with
@@ -133,12 +132,20 @@ func Receive(ctx context.Context, b *bot.Bot, doc *models.Document, caption stri
 	limit := int64(maxDownloadBytes) + 1
 	n, err := io.Copy(out, io.LimitReader(resp.Body, limit))
 	if err != nil {
+		_ = out.Close()
 		_ = os.Remove(dest)
 		return "", 0, err
 	}
 	if n > int64(maxDownloadBytes) {
+		_ = out.Close()
 		_ = os.Remove(dest)
 		return "", 0, fmt.Errorf("upload exceeds %d-byte cap", maxDownloadBytes)
+	}
+	// Check Close() on writable files so a flush / fsync failure surfaces
+	// as an error rather than silent data loss.
+	if err := out.Close(); err != nil {
+		_ = os.Remove(dest)
+		return "", 0, fmt.Errorf("close dest: %w", err)
 	}
 	if chown != nil {
 		_ = os.Chown(dest, int(chown.Uid), int(chown.Gid))

@@ -92,7 +92,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("instance lock", zap.Error(err))
 	}
-	defer instanceLock.Close()
+	// Lockfile is never written — only flock'd. Close() returning an error
+	// is unexpected; log it rather than silently defer.
+	defer func() {
+		if err := instanceLock.Close(); err != nil {
+			logger.Warn("instance lock close", zap.Error(err))
+		}
+	}()
 
 	gormDB, err := db.Open(cfg.DBPath)
 	if err != nil {
