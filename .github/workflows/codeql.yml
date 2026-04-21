@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           # `security-and-quality` is a superset of the default
@@ -46,8 +46,8 @@ jobs:
       # Autobuild handles `go build ./...` for us without needing a
       # repo-specific build script. If autobuild ever breaks on a
       # future layout change, replace with an explicit build step.
-      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/autobuild@v4
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
