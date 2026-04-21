@@ -33,6 +33,11 @@ jobs:
       - name: go test
         run: go test -count=1 -timeout 60s ./...
 
+      # syft is shelled out to by .goreleaser.yaml's `sboms:` block.
+      # Install it on the runner so the build can produce CycloneDX SBOMs.
+      - name: install syft
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: goreleaser release
         uses: goreleaser/goreleaser-action@v6
         with:
