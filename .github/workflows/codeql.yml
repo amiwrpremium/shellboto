@@ -38,7 +38,7 @@ jobs:
           # against an existing codebase; see .github/SETTINGS.md.
           queries: security-and-quality
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
