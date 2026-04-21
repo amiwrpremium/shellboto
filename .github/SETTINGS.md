@@ -99,6 +99,26 @@ appear. Then continue below.
 
 ## Secrets (when needed) — Secrets and variables → Actions
 
+- [ ] `RELEASE_PLEASE_TOKEN` **(required for automated releases)**:
+  - Without this, release-please falls back to `GITHUB_TOKEN`.
+    GitHub's anti-recursion rule then suppresses every downstream
+    workflow triggered by release-please: the release PR's CI
+    doesn't run, and the tag it creates on merge doesn't fire
+    `release.yml`. Result: the release PR looks blocked forever
+    and goreleaser never publishes the release artifacts
+    automatically.
+  - Generate a fine-grained PAT at
+    <https://github.com/settings/personal-access-tokens/new>:
+    - Resource owner: your account.
+    - Repository access: **Only select repositories** → this repo only.
+    - Repository permissions:
+      - **Contents**: Read and write
+      - **Pull requests**: Read and write
+      - **Workflows**: Read and write (release-please updates workflow
+        files if you ever add `extra-files` that include `.github/**`)
+    - Expiration: ≤ 1 year (fine-grained PATs cannot be infinite).
+  - Paste into repo secret named exactly `RELEASE_PLEASE_TOKEN`.
+
 - [ ] `HOMEBREW_TAP_GITHUB_TOKEN` *(optional, add when ready to
       publish Homebrew)*:
   - Use your existing `amiwrpremium/homebrew-tap` repo (a single
