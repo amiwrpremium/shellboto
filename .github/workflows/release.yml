@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  # Manual escape hatch: fire goreleaser against an existing tag.
+  # Used when a tag was created by GITHUB_TOKEN (e.g. release-please)
+  # and didn't trigger the push event due to GitHub's anti-recursion
+  # rule on default-token-created refs. Run with:
+  #   gh workflow run release.yml --ref v0.X.Y
+  workflow_dispatch:
 
 permissions:
   contents: write       # needed to create GitHub release
