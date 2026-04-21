@@ -18,8 +18,13 @@ updates:
       time: "05:00"
       timezone: UTC
     open-pull-requests-limit: 10
+    # `prefix: chore` + `include: scope` produces canonical
+    # `chore(deps): …` messages. A prefix that already contains parens
+    # (e.g. `chore(ci)`) makes dependabot generate `chore(ci)(deps): …`,
+    # which is technically valid Conventional Commits with our relaxed
+    # regex but uglier than necessary.
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: scope
     labels:
       - dependencies
@@ -38,8 +43,10 @@ updates:
       time: "05:00"
       timezone: UTC
     open-pull-requests-limit: 5
+    # See note above re: `chore` (without parens) keeps the
+    # generated message canonical.
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "chore"
       include: scope
     labels:
       - dependencies
