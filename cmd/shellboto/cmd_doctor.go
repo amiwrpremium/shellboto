@@ -42,11 +42,13 @@ func runDoctor(configPath string, out io.Writer) int {
 		r.pass("config parses + validates", fmt.Sprintf("db_path=%s log_format=%s", cfg.DBPath, cfg.LogFormat))
 	}
 
-	// 2) Required env vars.
-	if os.Getenv("SHELLBOTO_TOKEN") == "" {
-		r.fail("SHELLBOTO_TOKEN set", "empty or unset")
+	// 2) Required env vars + credential-backed secrets.
+	if v, src, err := config.ResolveSecretWithSource("SHELLBOTO_TOKEN", "shellboto-token"); err != nil {
+		r.fail("SHELLBOTO_TOKEN readable", err.Error())
+	} else if v == "" {
+		r.fail("SHELLBOTO_TOKEN set", "empty or unset (and no shellboto-token in $CREDENTIALS_DIRECTORY)")
 	} else {
-		r.pass("SHELLBOTO_TOKEN set", "")
+		r.pass("SHELLBOTO_TOKEN set", fmt.Sprintf("source=%s", src))
 	}
 	if raw := os.Getenv("SHELLBOTO_SUPERADMIN_ID"); raw == "" {
 		r.fail("SHELLBOTO_SUPERADMIN_ID set", "empty or unset")
@@ -57,13 +59,13 @@ func runDoctor(configPath string, out io.Writer) int {
 	}
 
 	// 3) Audit seed.
-	switch seed, seedSet, err := auditSeedDecode(); {
+	switch seed, src, err := auditSeedDecode(); {
 	case err != nil:
 		r.fail("SHELLBOTO_AUDIT_SEED valid", err.Error())
-	case !seedSet:
+	case src == config.SecretSourceNone:
 		r.warn("SHELLBOTO_AUDIT_SEED valid", "not set — dev mode (all-zeros fallback)")
 	default:
-		r.pass("SHELLBOTO_AUDIT_SEED valid", fmt.Sprintf("%d bytes", len(seed)))
+		r.pass("SHELLBOTO_AUDIT_SEED valid", fmt.Sprintf("%d bytes, source=%s", len(seed), src))
 	}
 
 	// 4) DB path writable (or already exists).
@@ -101,23 +103,27 @@ func runDoctor(configPath string, out io.Writer) int {
 	return exitOK
 }
 
-// auditSeedDecode parses SHELLBOTO_AUDIT_SEED. Returns:
-//   - seed: decoded bytes (or nil if env var is empty)
-//   - seedSet: true when the env var was present + decoded
-//   - err: non-nil when present but invalid (hex / length)
-func auditSeedDecode() ([]byte, bool, error) {
-	raw := os.Getenv("SHELLBOTO_AUDIT_SEED")
+// auditSeedDecode parses SHELLBOTO_AUDIT_SEED (or $CREDENTIALS_DIRECTORY/
+// shellboto-audit-seed). Returns:
+//   - seed: decoded bytes (or nil if unset everywhere)
+//   - source: where the value was loaded from (env / creds / none)
+//   - err: non-nil when a value was found but invalid (hex / length)
+func auditSeedDecode() ([]byte, config.SecretSource, error) {
+	raw, source, err := config.ResolveSecretWithSource("SHELLBOTO_AUDIT_SEED", "shellboto-audit-seed")
+	if err != nil {
+		return nil, source, err
+	}
 	if raw == "" {
-		return nil, false, nil
+		return nil, config.SecretSourceNone, nil
 	}
 	seed, err := hex.DecodeString(raw)
 	if err != nil {
-		return nil, true, fmt.Errorf("not valid hex: %w", err)
+		return nil, source, fmt.Errorf("not valid hex: %w", err)
 	}
 	if len(seed) != 32 {
-		return nil, true, fmt.Errorf("must decode to 32 bytes, got %d", len(seed))
+		return nil, source, fmt.Errorf("must decode to 32 bytes, got %d", len(seed))
 	}
-	return seed, true, nil
+	return seed, source, nil
 }
 
 // checkDBPath verifies the parent dir exists (or is creatable) and is

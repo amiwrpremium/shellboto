@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# Migrate shellboto secrets from /etc/shellboto/env to systemd-creds.
+#
+# After running this script:
+#
+#   /etc/shellboto/env                          keeps only SHELLBOTO_SUPERADMIN_ID
+#                                               (an identifier, not a secret)
+#   /etc/shellboto/credentials/*.cred           encrypted blobs (ciphertext on disk)
+#   /etc/systemd/system/shellboto.service.d/
+#     credentials.conf                          LoadCredentialEncrypted= lines
+#
+# The shellboto binary reads $CREDENTIALS_DIRECTORY/<name> when the matching
+# env var is unset — see internal/config/secret.go.
+#
+# On systems with a TPM2, systemd-creds seals the keys to it automatically.
+# Without a TPM, systemd uses the system credential.secret (/var/lib/systemd/
+# credential.secret, 0600 root). Either way, encrypted files are useless on
+# a *different* host — backup / disk-image theft no longer exposes plaintext.
+#
+# Requires systemd 250+.
+#
+# Usage:   sudo ./deploy/enable-credentials.sh
+#          sudo ./deploy/enable-credentials.sh -y     # non-interactive
+#
+# Reversible: re-run this script passing --revert to restore the env-file
+# layout and remove the override.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091 source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
+
+ENV_FILE=/etc/shellboto/env
+CREDS_DIR=/etc/shellboto/credentials
+OVERRIDE_DIR=/etc/systemd/system/shellboto.service.d
+OVERRIDE_FILE=$OVERRIDE_DIR/credentials.conf
+
+ASSUME_YES=false
+REVERT=false
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes)    ASSUME_YES=true ;;
+        --revert)    REVERT=true ;;
+        -h|--help)
+            grep '^# ' "$0" | sed 's/^# //'
+            exit 0
+            ;;
+        *)
+            echo "unknown flag: $arg" >&2
+            exit 2
+            ;;
+    esac
+done
+
+color_init
+need_root
+need_cmd systemctl systemd-creds
+
+# Version check — LoadCredentialEncrypted= landed in systemd 250.
+systemd_version=$(systemctl --version | awk 'NR==1{print $2}')
+if [ "$systemd_version" -lt 250 ]; then
+    fail "systemd $systemd_version is older than 250; systemd-creds LoadCredentialEncrypted is not supported."
+    exit 1
+fi
+
+if $REVERT; then
+    title "Revert — credentials → env file"
+    step "Remove systemd override"
+    if [ -f "$OVERRIDE_FILE" ]; then
+        rm -f "$OVERRIDE_FILE"
+        rmdir --ignore-fail-on-non-empty "$OVERRIDE_DIR" 2>/dev/null || true
+        ok "deleted $OVERRIDE_FILE"
+    else
+        info "nothing to remove at $OVERRIDE_FILE"
+    fi
+    step "Remove encrypted credential blobs"
+    if [ -d "$CREDS_DIR" ]; then
+        rm -rf "$CREDS_DIR"
+        ok "deleted $CREDS_DIR"
+    fi
+    warn "Put SHELLBOTO_TOKEN and SHELLBOTO_AUDIT_SEED back into $ENV_FILE manually; restart the service."
+    step "daemon-reload"
+    systemctl daemon-reload
+    exit 0
+fi
+
+title "Enable systemd-creds for shellboto"
+
+# Read current values from env file.
+step "Read secrets from $ENV_FILE"
+if [ ! -r "$ENV_FILE" ]; then
+    fail "$ENV_FILE not readable; run the installer first."
+    exit 1
+fi
+
+TOKEN=$(read_env_value "$ENV_FILE" SHELLBOTO_TOKEN || true)
+SEED=$(read_env_value  "$ENV_FILE" SHELLBOTO_AUDIT_SEED || true)
+
+if [ -z "$TOKEN" ]; then
+    fail "SHELLBOTO_TOKEN missing from $ENV_FILE — nothing to migrate."
+    exit 1
+fi
+if [ -z "$SEED" ]; then
+    warn "SHELLBOTO_AUDIT_SEED empty in $ENV_FILE — skipping seed migration (dev mode)."
+fi
+
+ok "token found ($(echo "$TOKEN" | wc -c | tr -d ' ') chars)"
+if [ -n "$SEED" ]; then
+    ok "audit seed found ($(echo "$SEED" | wc -c | tr -d ' ') chars)"
+fi
+
+if ! $ASSUME_YES; then
+    echo
+    echo "About to:"
+    echo "  • Encrypt token (and seed, if present) via systemd-creds"
+    echo "  • Write encrypted blobs to $CREDS_DIR/*.cred"
+    echo "  • Drop $OVERRIDE_FILE with LoadCredentialEncrypted= lines"
+    echo "  • REMOVE the plaintext secrets from $ENV_FILE"
+    echo "  • systemctl daemon-reload + restart the service"
+    echo
+    read -rp "Proceed? [y/N] " ans
+    case "$ans" in [yY]*) ;; *) info "aborted"; exit 0 ;; esac
+fi
+
+step "Create credentials directory"
+install -d -m 0700 -o root -g root "$CREDS_DIR"
+
+step "Encrypt token → $CREDS_DIR/shellboto-token.cred"
+# --name= ties the encrypted blob to this specific credential name so a
+# misconfigured unit referencing the wrong name fails loudly at boot.
+umask 077
+printf '%s' "$TOKEN" | systemd-creds encrypt --name=shellboto-token - "$CREDS_DIR/shellboto-token.cred"
+chmod 0600 "$CREDS_DIR/shellboto-token.cred"
+ok "encrypted"
+
+if [ -n "$SEED" ]; then
+    step "Encrypt audit seed → $CREDS_DIR/shellboto-audit-seed.cred"
+    printf '%s' "$SEED" | systemd-creds encrypt --name=shellboto-audit-seed - "$CREDS_DIR/shellboto-audit-seed.cred"
+    chmod 0600 "$CREDS_DIR/shellboto-audit-seed.cred"
+    ok "encrypted"
+fi
+
+step "Write systemd override → $OVERRIDE_FILE"
+install -d -m 0755 -o root -g root "$OVERRIDE_DIR"
+{
+    echo "# Auto-generated by deploy/enable-credentials.sh — do not edit by hand."
+    echo "# Reverts cleanly with: sudo ./deploy/enable-credentials.sh --revert"
+    echo "[Service]"
+    echo "LoadCredentialEncrypted=shellboto-token:$CREDS_DIR/shellboto-token.cred"
+    if [ -n "$SEED" ]; then
+        echo "LoadCredentialEncrypted=shellboto-audit-seed:$CREDS_DIR/shellboto-audit-seed.cred"
+    fi
+} > "$OVERRIDE_FILE"
+chmod 0644 "$OVERRIDE_FILE"
+ok "$OVERRIDE_FILE"
+
+step "Strip plaintext secrets from $ENV_FILE"
+# Keep the SUPERADMIN_ID line (identifier, not secret). Comment everything
+# else out with a note so a future operator knows where they went.
+tmp=$(mktemp)
+{
+    echo "# SHELLBOTO_TOKEN and SHELLBOTO_AUDIT_SEED moved to systemd-creds."
+    echo "# See $OVERRIDE_FILE and $CREDS_DIR/*.cred."
+    echo "# Revert: sudo $SCRIPT_DIR/enable-credentials.sh --revert"
+    echo
+    grep -E '^\s*SHELLBOTO_SUPERADMIN_ID=' "$ENV_FILE" || true
+} > "$tmp"
+install -m 0600 -o root -g root "$tmp" "$ENV_FILE"
+rm -f "$tmp"
+ok "rewrote $ENV_FILE"
+
+step "daemon-reload + restart"
+systemctl daemon-reload
+if systemctl is-active --quiet shellboto; then
+    systemctl restart shellboto
+    ok "service restarted"
+else
+    info "service not currently active; not starting"
+fi
+
+step "Run doctor"
+if shellboto doctor; then
+    ok "doctor green"
+else
+    warn "doctor reported issues — inspect output above"
+fi
+
+echo
+title "Done — secrets now encrypted at rest"
+echo "  encrypted blobs : $CREDS_DIR/"
+echo "  override file   : $OVERRIDE_FILE"
+echo "  env file        : $ENV_FILE  (no more plaintext secrets)"
+echo
+echo "Backups that capture $CREDS_DIR/ now contain ciphertext only."
+echo "To revert: sudo $SCRIPT_DIR/enable-credentials.sh --revert"

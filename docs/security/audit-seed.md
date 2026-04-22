@@ -58,6 +58,10 @@ from a weaker source.
 
 ## Storage
 
+Two modes. Pick one.
+
+### Env-file mode (default)
+
 ```
 /etc/shellboto/env:
 SHELLBOTO_AUDIT_SEED=<64-char hex>
@@ -65,6 +69,20 @@ SHELLBOTO_AUDIT_SEED=<64-char hex>
 
 File perms: `-rw------- 1 root root`. systemd loads this into the
 bot's env before ExecStart via `EnvironmentFile=`.
+
+### systemd-creds mode (encrypted at rest)
+
+After running `./deploy/enable-credentials.sh`:
+
+```
+/etc/shellboto/credentials/shellboto-audit-seed.cred   # ciphertext, 0600
+```
+
+Decrypted at service start into `$CREDENTIALS_DIRECTORY/shellboto-audit-seed`
+(memfd-backed, never on disk). `shellboto doctor` reports
+`SHELLBOTO_AUDIT_SEED valid  32 bytes, source=systemd-creds`.
+
+Deep dive: [secrets-at-rest.md](secrets-at-rest.md).
 
 Do **not**:
 
