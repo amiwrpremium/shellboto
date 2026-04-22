@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/amiwrpremium/shellboto/compare/v0.1.3...v0.1.4) (2026-04-22)
+
+
+### Documentation
+
+* link sibling project macontrol in README ([#19](https://github.com/amiwrpremium/shellboto/issues/19)) ([c3bb12a](https://github.com/amiwrpremium/shellboto/commit/c3bb12a3f11fd71e147ec7197e348b754f4ec218))
+
 ## [0.1.3](https://github.com/amiwrpremium/shellboto/compare/v0.1.2...v0.1.3) (2026-04-22)
 
 
