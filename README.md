@@ -1,5 +1,14 @@
 # shellboto
 
+*Control your Linux VPS from Telegram. Auditable, self-hosted, one static binary.*
+
+[![ci](https://github.com/amiwrpremium/shellboto/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/amiwrpremium/shellboto/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/amiwrpremium/shellboto?include_prereleases&sort=semver)](https://github.com/amiwrpremium/shellboto/releases)
+[![codeql](https://github.com/amiwrpremium/shellboto/actions/workflows/codeql.yml/badge.svg)](https://github.com/amiwrpremium/shellboto/actions/workflows/codeql.yml)
+[![go version](https://img.shields.io/github/go-mod/go-version/amiwrpremium/shellboto)](./go.mod)
+[![go report](https://goreportcard.com/badge/github.com/amiwrpremium/shellboto)](https://goreportcard.com/report/github.com/amiwrpremium/shellboto)
+[![license](https://img.shields.io/github/license/amiwrpremium/shellboto)](./LICENSE)
+
 <p align="center">
   <img src="docs/assets/hero.png" alt="shellboto — phone controlling a VPS shell" width="100%" />
 </p>
@@ -9,6 +18,42 @@ A Telegram bot that gives whitelisted users a live shell on the VPS it runs on. 
 User management and an audit log (with full captured output per command) are persisted in a local SQLite file.
 
 > ⚠ **This is a remote shell bot running as root.** The whitelist is the only thing between a compromised Telegram account (yours or anyone you add) and full control of your VPS. Protect your Telegram account with 2FA and keep the user list tight.
+
+## Table of contents
+
+- [Quickstart](#quickstart)
+- [Roles](#roles)
+- [Features](#features)
+- [Architecture](#architecture)
+- [User-facing commands](#user-facing-commands)
+- [Build](#build)
+- [CLI subcommands](#cli-subcommands)
+- [Install](#install)
+- [Rollback](#rollback)
+- [Uninstall](#uninstall)
+- [Adding users after install](#adding-users-after-install)
+- [Non-root shells for the `user` role](#non-root-shells-for-the-user-role)
+- [Audit tamper-evidence](#audit-tamper-evidence)
+- [Development](#development)
+- [Known limitations](#known-limitations)
+- [Security](#security)
+- [Disclaimer](#disclaimer)
+
+## Quickstart
+
+Install + start in a few commands on a Debian/Ubuntu VPS:
+
+```bash
+# Pick the latest linux_amd64.deb from the releases page, then:
+sudo apt install ./shellboto_<VERSION>_linux_amd64.deb
+sudo vi /etc/shellboto/env       # paste SHELLBOTO_TOKEN + SHELLBOTO_SUPERADMIN_ID + SHELLBOTO_AUDIT_SEED
+sudo systemctl enable --now shellboto
+shellboto doctor                  # all-green preflight
+```
+
+Send `/start` to your bot on Telegram, then type any shell command.
+
+Latest builds: [**Releases**](https://github.com/amiwrpremium/shellboto/releases) (amd64 + arm64, .deb / .rpm / tar.gz, SBOMs, checksums). Full step-by-step: [docs/getting-started/quickstart.md](docs/getting-started/quickstart.md).
 
 ## Roles
 
@@ -289,6 +334,15 @@ binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 - `exec bash` / `exec sh` (re-execing the shell in place) wedges boundary detection: the new shell image doesn't inherit our `PROMPT_COMMAND` dispatcher, so the next command never signals completion. The bot's per-command timeout (default 5m) eventually fires and the reaper cleans up. Run `/reset` for an immediate recovery.
 - Telegram's bot-API file limit is 50 MB for both `/get` and uploads.
 - Full command output is stored in the audit DB. If your commands spit out secrets in logs, those secrets end up on disk. Filesystem perms 0600 are the only protection.
+
+## Security
+
+Please **don't open a public issue** for security reports. Two channels:
+
+- GitHub's [private vulnerability reporting](https://github.com/amiwrpremium/shellboto/security/advisories/new) (preferred — attaches the report to the repo, creates a private advisory).
+- Email **amiwrpremium@gmail.com** directly.
+
+I'll acknowledge within a few days, coordinate a fix, and credit you in the release notes unless you ask otherwise.
 
 ## Disclaimer
 
