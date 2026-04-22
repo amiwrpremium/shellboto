@@ -34,6 +34,11 @@ Run through before announcing the bot to your team.
       Check with `shellboto doctor`.
 - [ ] `/etc/shellboto/env` has mode 0600 and owner root:root.
 - [ ] `/etc/shellboto/config.toml` has mode 0600.
+- [ ] *(Optional hardening)* Run `sudo ./deploy/enable-credentials.sh`
+      to move `SHELLBOTO_TOKEN` + `SHELLBOTO_AUDIT_SEED` from the
+      plaintext env file to systemd-creds encrypted-at-rest storage.
+      Backup / disk-image theft then exposes only ciphertext. See
+      [../security/secrets-at-rest.md](../security/secrets-at-rest.md).
 - [ ] If any `role=user` callers will be on the whitelist:
   - [ ] `user_shell_user` is set in config.
   - [ ] The unprivileged unix account exists and has no sudoers

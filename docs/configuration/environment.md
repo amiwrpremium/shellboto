@@ -52,6 +52,25 @@ systemd's `EnvironmentFile=`.
   See [../security/audit-seed.md](../security/audit-seed.md) for
   the correct rotation procedure.
 
+## Credentials-file fallback (systemd-creds)
+
+For **both** `SHELLBOTO_TOKEN` and `SHELLBOTO_AUDIT_SEED`: if the env
+var is unset or empty at startup, shellboto falls back to reading
+from `$CREDENTIALS_DIRECTORY/<credname>`:
+
+- `SHELLBOTO_TOKEN` → `$CREDENTIALS_DIRECTORY/shellboto-token`
+- `SHELLBOTO_AUDIT_SEED` → `$CREDENTIALS_DIRECTORY/shellboto-audit-seed`
+
+`CREDENTIALS_DIRECTORY` is set by systemd (250+) when the unit
+declares `LoadCredential=` or `LoadCredentialEncrypted=`. It points
+at a read-only memfd-backed directory visible only to the
+service's PID — the value never touches disk for the running
+process.
+
+Run `./deploy/enable-credentials.sh` to migrate from plaintext env
+file to encrypted creds. Deep dive:
+[../security/secrets-at-rest.md](../security/secrets-at-rest.md).
+
 ## The env file
 
 Installer writes `/etc/shellboto/env` from `deploy/env.example`,

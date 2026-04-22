@@ -246,13 +246,17 @@ func main() {
 	logger.Info("stopped")
 }
 
-// resolveAuditSeed reads SHELLBOTO_AUDIT_SEED from the environment. The
-// value must be a hex-encoded 32-byte blob. Empty/missing = all-zeros
-// fallback (dev mode) with a visible startup warning.
+// resolveAuditSeed reads SHELLBOTO_AUDIT_SEED from the environment, falling
+// back to $CREDENTIALS_DIRECTORY/shellboto-audit-seed (systemd-creds
+// delivery). The value must be a hex-encoded 32-byte blob. Empty/missing
+// = all-zeros fallback (dev mode) with a visible startup warning.
 func resolveAuditSeed(logger *zap.Logger) ([]byte, []zap.Field) {
-	raw := os.Getenv("SHELLBOTO_AUDIT_SEED")
+	raw, source, err := config.ResolveSecretWithSource("SHELLBOTO_AUDIT_SEED", "shellboto-audit-seed")
+	if err != nil {
+		logger.Fatal("SHELLBOTO_AUDIT_SEED: read failed", zap.Error(err))
+	}
 	if raw == "" {
-		logger.Warn("SHELLBOTO_AUDIT_SEED is empty; falling back to all-zeros seed. See README for install steps.")
+		logger.Warn("SHELLBOTO_AUDIT_SEED is empty; falling back to all-zeros seed. See docs/security/audit-seed.md.")
 		return nil, []zap.Field{zap.Bool("seeded", false)}
 	}
 	seed, err := hex.DecodeString(raw)
@@ -263,7 +267,11 @@ func resolveAuditSeed(logger *zap.Logger) ([]byte, []zap.Field) {
 		logger.Fatal("SHELLBOTO_AUDIT_SEED: must decode to 32 bytes",
 			zap.Int("got", len(seed)), zap.Int("want", 32))
 	}
-	return seed, []zap.Field{zap.Bool("seeded", true), zap.Int("seed_len", len(seed))}
+	return seed, []zap.Field{
+		zap.Bool("seeded", true),
+		zap.Int("seed_len", len(seed)),
+		zap.String("source", source.String()),
+	}
 }
 
 // resolveUserShell looks up the configured unprivileged Unix account and

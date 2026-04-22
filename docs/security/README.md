@@ -10,6 +10,7 @@ don't fully trust.
 | [whitelist-and-rbac.md](whitelist-and-rbac.md) | Auth flow, RBAC transitions, `auth_reject` audit rows |
 | [audit-chain.md](audit-chain.md) | SHA-256 hash chain math, verify walker, tamper detection |
 | [audit-seed.md](audit-seed.md) | `SHELLBOTO_AUDIT_SEED` — generation, storage, rotation |
+| [secrets-at-rest.md](secrets-at-rest.md) | env file vs. systemd-creds — at-rest encryption for token + seed |
 | [danger-matcher.md](danger-matcher.md) | **Every built-in regex with examples + rationale** |
 | [secret-redaction.md](secret-redaction.md) | The redactor's pattern list, replacement rules, known limitations |
 | [rate-limiting.md](rate-limiting.md) | Post-auth + pre-auth token buckets; why the pre-auth one matters |

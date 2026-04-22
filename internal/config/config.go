@@ -104,9 +104,15 @@ func (d *Duration) UnmarshalText(text []byte) error {
 // extension is a fatal error rather than silently trying a default —
 // operators should explicitly name the format.
 //
-// Every critical value also draws from the environment: SHELLBOTO_TOKEN
-// (required), SHELLBOTO_SUPERADMIN_ID (required), SHELLBOTO_AUDIT_SEED
-// (read via main).
+// Every critical value also draws from the environment:
+//
+//   - SHELLBOTO_TOKEN (required). If empty, falls back to reading
+//     $CREDENTIALS_DIRECTORY/shellboto-token — the file-backed delivery
+//     used by systemd-creds. See ResolveSecret.
+//   - SHELLBOTO_SUPERADMIN_ID (required). Env-only (not a secret; just
+//     an identifier).
+//   - SHELLBOTO_AUDIT_SEED (read via main, same env/creds fallback as
+//     the token — credential name: shellboto-audit-seed).
 func Load(path string) (*Config, error) {
 	c := &Config{
 		DBPath:                 "/var/lib/shellboto/state.db",
@@ -135,10 +141,15 @@ func Load(path string) (*Config, error) {
 			return nil, err
 		}
 	}
-	c.Token = os.Getenv("SHELLBOTO_TOKEN")
-	if c.Token == "" {
-		return nil, fmt.Errorf("SHELLBOTO_TOKEN env var is empty")
+	token, err := ResolveSecret("SHELLBOTO_TOKEN", "shellboto-token")
+	if err != nil {
+		return nil, err
 	}
+	if token == "" {
+		return nil, fmt.Errorf("SHELLBOTO_TOKEN is empty " +
+			"(not set in env and no shellboto-token in $CREDENTIALS_DIRECTORY)")
+	}
+	c.Token = token
 	superStr := os.Getenv("SHELLBOTO_SUPERADMIN_ID")
 	if superStr == "" {
 		return nil, fmt.Errorf("SHELLBOTO_SUPERADMIN_ID env var is empty")
