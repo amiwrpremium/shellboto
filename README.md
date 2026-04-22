@@ -289,3 +289,26 @@ binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 - `exec bash` / `exec sh` (re-execing the shell in place) wedges boundary detection: the new shell image doesn't inherit our `PROMPT_COMMAND` dispatcher, so the next command never signals completion. The bot's per-command timeout (default 5m) eventually fires and the reaper cleans up. Run `/reset` for an immediate recovery.
 - Telegram's bot-API file limit is 50 MB for both `/get` and uploads.
 - Full command output is stored in the audit DB. If your commands spit out secrets in logs, those secrets end up on disk. Filesystem perms 0600 are the only protection.
+
+## Disclaimer
+
+**shellboto is provided "AS IS", WITHOUT WARRANTY OF ANY KIND**, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, title, and noninfringement. See [LICENSE](./LICENSE) for the full MIT terms.
+
+**You run shellboto entirely at your own risk.** By installing, operating, contributing to, or otherwise using this software, you accept that the author(s) and contributors have **no liability** for any loss, damage, compromise, downtime, or legal exposure arising from its use or misuse — including but not limited to:
+
+- Data loss, data corruption, or unauthorised disclosure (including secrets that pass through command output and land in the audit blob).
+- Compromise of the VPS or any system reachable from it.
+- Financial loss, reputational harm, or regulatory penalties.
+- Any action performed by a whitelisted user you or another admin added — intentional or accidental.
+- Loss of access to your own server, account, or data.
+
+shellboto **deliberately gives whitelisted Telegram users a live shell on your server**, typically running as root. That is the feature, not a bug. You alone are responsible for:
+
+- Securing your Telegram account (2FA, recovery flow, device hygiene).
+- Vetting every user you whitelist; promoting with care; revoking promptly.
+- Protecting `/etc/shellboto/env` (or its `systemd-creds` replacement) and your audit seed.
+- Backups, disaster recovery, and periodic `shellboto audit verify` runs.
+- Patching the host, firewalling it, and otherwise operating the VPS.
+- Understanding the built-in danger matcher's scope and its explicit limitations (see [docs/security/danger-matcher.md](docs/security/danger-matcher.md)).
+
+If you do not accept these terms, do not install or run shellboto.
