@@ -1,5 +1,9 @@
 # shellboto
 
+<p align="center">
+  <img src="docs/assets/hero.png" alt="shellboto — phone controlling a VPS shell" width="100%" />
+</p>
+
 A Telegram bot that gives whitelisted users a live shell on the VPS it runs on. Each user gets their own persistent bash (pty-backed, so `cd`, env vars, aliases, and job control all work). Command output streams live by editing a single message; output that exceeds the Telegram message cap spills to an attached `output.txt`.
 
 User management and an audit log (with full captured output per command) are persisted in a local SQLite file.
@@ -22,6 +26,16 @@ User management and an audit log (with full captured output per command) are per
 - Dangerous commands (`rm -rf`, `dd of=/dev/*`, `shutdown`, `reboot`, `mkfs.*`, piping to shell, etc.) require tapping ✅ Run on the warning message within 60s.
 - Full audit log with gzipped output blob per command; 90-day auto-prune.
 - Configurable default timeout, idle-shell reaping, heartbeat.
+
+## Architecture
+
+A Telegram message reaches shellboto, authenticates against the whitelist, dispatches into a per-user pty-backed bash, streams output back by editing the original message, and writes a hash-chained audit row for every command.
+
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="shellboto architecture: Telegram → cloud → bot → bash (pty) → audit DB" width="100%" />
+</p>
+
+Deep dive: [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## User-facing commands
 
