@@ -39,6 +39,7 @@ User management and an audit log (with full captured output per command) are per
 - [Non-root shells for the `user` role](#non-root-shells-for-the-user-role)
 - [Audit tamper-evidence](#audit-tamper-evidence)
 - [Development](#development)
+- [Documentation](#documentation)
 - [Known limitations](#known-limitations)
 - [Acknowledgments](#acknowledgments)
 - [Security](#security)
@@ -350,6 +351,26 @@ land commits on `master` → release-please opens a PR that bumps the
 version + writes `CHANGELOG.md` → merge the PR → it tags
 automatically → `release.yml` runs goreleaser (cross-platform
 binaries, .deb/.rpm, Homebrew tap push, GitHub release).
+
+## Documentation
+
+The full [`docs/`](docs/) tree — every subdirectory has its own `README.md` landing page:
+
+- **[Getting started](docs/getting-started/)** — quickstart, @BotFather walkthrough, finding a Telegram user ID, first install, first commands.
+- **[Configuration](docs/configuration/)** — formats, [full schema with every key + default](docs/configuration/schema.md), environment variables, roles, non-root shells, timeouts, audit-output modes.
+- **[Architecture](docs/architecture/)** — overview, stack, project layout, package graph, runtime model, data flow, concurrency model, design decisions.
+- **[Security](docs/security/)** — threat model, whitelist + RBAC, audit hash chain, seed management, **full danger-matcher regex table**, secret redaction, rate limiting, secrets-at-rest modes.
+- **[Shell](docs/shell/)** — pty vs. exec, fd-3 control pipe, output buffer, signal handling, user-shell drop-privs.
+- **[Audit](docs/audit/)** + **[Database](docs/database/)** — schema, kinds, hash-chain deep dive, retention, all `shellboto audit …` CLI subcommands, backup / restore / vacuum.
+- **[Telegram](docs/telegram/)** — slash commands, callbacks + flows, streaming output, supernotify, file transfer.
+- **[Deployment](docs/deployment/)** — installer, systemd / OpenRC / runit / s6, uninstall, rollback, [production checklist](docs/deployment/production-checklist.md).
+- **[Operations](docs/operations/)** — doctor, logs, heartbeat + idle-reap, user management, updating, monitoring.
+- **[Development](docs/development/)** — prerequisites, build from source, hooks, linting, commit messages, testing, CI, releasing.
+- **[Packaging](docs/packaging/)** — goreleaser, .deb/.rpm, Homebrew, SBOMs, verifying downloads.
+- **[Runbooks](docs/runbooks/)** — bad release, token leak, audit chain broken, DB corruption, shell stuck, disk full.
+- **[Troubleshooting](docs/troubleshooting/)** — installer fails, bot not responding, commands never complete, audit verify fails, error-message lookup.
+- **[Reference](docs/reference/)** — [CLI](docs/reference/cli.md), [Telegram commands](docs/reference/telegram-commands.md), [env vars](docs/reference/env-vars.md), [config keys](docs/reference/config-keys.md), [audit kinds](docs/reference/audit-kinds.md), [danger patterns](docs/reference/danger-patterns.md), [file paths](docs/reference/file-paths.md), [exit codes](docs/reference/exit-codes.md).
+- **[FAQ](docs/faq.md)** — recurring questions (is this safe? why pty? why doesn't `vim` work? Docker? auditing; rotation; …).
 
 ## Known limitations
 
