@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/amiwrpremium/shellboto/compare/v0.1.1...v0.1.2) (2026-04-22)
+
+
+### Features
+
+* **security:** systemd-creds fallback for token + audit seed ([#15](https://github.com/amiwrpremium/shellboto/issues/15)) ([a5a27dc](https://github.com/amiwrpremium/shellboto/commit/a5a27dc230ae85dc9decfaed0c14fceb2c79a6b2))
+
 ## [0.1.1](https://github.com/amiwrpremium/shellboto/compare/v0.1.0...v0.1.1) (2026-04-21)
 
 
