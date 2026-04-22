@@ -1,10 +1,65 @@
 # shellboto
 
+*Control your Linux VPS from Telegram. Auditable, self-hosted, one static binary.*
+
+[![ci](https://github.com/amiwrpremium/shellboto/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/amiwrpremium/shellboto/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/amiwrpremium/shellboto?include_prereleases&sort=semver)](https://github.com/amiwrpremium/shellboto/releases)
+[![codeql](https://github.com/amiwrpremium/shellboto/actions/workflows/codeql.yml/badge.svg)](https://github.com/amiwrpremium/shellboto/actions/workflows/codeql.yml)
+[![go version](https://img.shields.io/github/go-mod/go-version/amiwrpremium/shellboto)](./go.mod)
+[![go report](https://goreportcard.com/badge/github.com/amiwrpremium/shellboto)](https://goreportcard.com/report/github.com/amiwrpremium/shellboto)
+[![license](https://img.shields.io/github/license/amiwrpremium/shellboto)](./LICENSE)
+
+> **Status: v0.1.x — early.** Stable for solo-operator use; config keys, CLI flags, and the audit-event schema may still shift before `1.0.0`. Semver goes strict at 1.0 — until then `feat` bumps patch and `feat!` bumps minor per `release-please-config.json`.
+
+<p align="center">
+  <img src="docs/assets/hero.png" alt="shellboto — phone controlling a VPS shell" width="100%" />
+</p>
+
 A Telegram bot that gives whitelisted users a live shell on the VPS it runs on. Each user gets their own persistent bash (pty-backed, so `cd`, env vars, aliases, and job control all work). Command output streams live by editing a single message; output that exceeds the Telegram message cap spills to an attached `output.txt`.
 
 User management and an audit log (with full captured output per command) are persisted in a local SQLite file.
 
 > ⚠ **This is a remote shell bot running as root.** The whitelist is the only thing between a compromised Telegram account (yours or anyone you add) and full control of your VPS. Protect your Telegram account with 2FA and keep the user list tight.
+
+## Table of contents
+
+- [Quickstart](#quickstart)
+- [Roles](#roles)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Why not just SSH?](#why-not-just-ssh)
+- [User-facing commands](#user-facing-commands)
+- [Build](#build)
+- [CLI subcommands](#cli-subcommands)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Rollback](#rollback)
+- [Uninstall](#uninstall)
+- [Adding users after install](#adding-users-after-install)
+- [Non-root shells for the `user` role](#non-root-shells-for-the-user-role)
+- [Audit tamper-evidence](#audit-tamper-evidence)
+- [Development](#development)
+- [Documentation](#documentation)
+- [Known limitations](#known-limitations)
+- [Acknowledgments](#acknowledgments)
+- [Security](#security)
+- [Disclaimer](#disclaimer)
+
+## Quickstart
+
+Install + start in a few commands on a Debian/Ubuntu VPS:
+
+```bash
+# Pick the latest linux_amd64.deb from the releases page, then:
+sudo apt install ./shellboto_<VERSION>_linux_amd64.deb
+sudo vi /etc/shellboto/env       # paste SHELLBOTO_TOKEN + SHELLBOTO_SUPERADMIN_ID + SHELLBOTO_AUDIT_SEED
+sudo systemctl enable --now shellboto
+shellboto doctor                  # all-green preflight
+```
+
+Send `/start` to your bot on Telegram, then type any shell command.
+
+Latest builds: [**Releases**](https://github.com/amiwrpremium/shellboto/releases) (amd64 + arm64, .deb / .rpm / tar.gz, SBOMs, checksums). Full step-by-step: [docs/getting-started/quickstart.md](docs/getting-started/quickstart.md).
 
 ## Roles
 
@@ -22,6 +77,27 @@ User management and an audit log (with full captured output per command) are per
 - Dangerous commands (`rm -rf`, `dd of=/dev/*`, `shutdown`, `reboot`, `mkfs.*`, piping to shell, etc.) require tapping ✅ Run on the warning message within 60s.
 - Full audit log with gzipped output blob per command; 90-day auto-prune.
 - Configurable default timeout, idle-shell reaping, heartbeat.
+
+## Architecture
+
+A Telegram message reaches shellboto, authenticates against the whitelist, dispatches into a per-user pty-backed bash, streams output back by editing the original message, and writes a hash-chained audit row for every command.
+
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="shellboto architecture: Telegram → cloud → bot → bash (pty) → audit DB" width="100%" />
+</p>
+
+Deep dive: [docs/architecture/overview.md](docs/architecture/overview.md).
+
+## Why not just SSH?
+
+- **Audit trail built in.** Every command, exit code, and full output is stored hash-chained in SQLite — you can replay exactly what happened, detect tampering, and prune on a schedule.
+- **Phone-only operation.** 2FA Telegram is your entire prerequisite. No VPN, no SSH client install on a new device, no private key to carry, no bastion host.
+- **Danger-prompt safety net.** 25 built-in regexes flag destructive patterns (`rm -rf /`, `dd of=/dev/sda`, pipe-to-shell, etc.); execution requires tapping ✅ Run within 60s.
+- **Team-shareable without key distribution.** Whitelist is by Telegram ID; separate `user` and `admin` roles with RBAC; promote/demote is two taps instead of rotating an `authorized_keys`.
+- **Live output streaming.** Long-running commands update the same Telegram message as output arrives — no waiting for the full run to finish before seeing the first line.
+- **Per-command containment.** Timeout + output-size caps + auto-SIGKILL on overflow — a runaway process can't OOM the box.
+
+Use SSH when you need full TTY (`vim`, `top`), port forwards, X11, or `scp` of giant files. Use shellboto when you want a traceable, phone-accessible "send command, see result" loop with auditability baked in.
 
 ## User-facing commands
 
@@ -84,6 +160,15 @@ bot as before — the systemd unit is unaffected. Every subcommand accepts
 `-config <path>` (default `/etc/shellboto/config.toml`) and
 `SHELLBOTO_TOKEN` / `SHELLBOTO_SUPERADMIN_ID` must be set the same way
 as for the service.
+
+## Requirements
+
+- **OS**: Linux, `amd64` or `arm64`. macOS binaries cover the CLI subcommands (`audit verify`, `db backup`, etc.); the bot itself is Linux-only (uses pty + Linux-specific `Credential{Uid}` and ioctl syscalls).
+- **Service manager**: systemd preferred. OpenRC / runit / s6 init scripts included under `deploy/init/` for non-systemd hosts.
+- **systemd 250+** — only needed for the optional encrypted-at-rest secrets mode via `deploy/enable-credentials.sh`.
+- **Go 1.26+** — only needed if you build from source. Pre-built `.deb` / `.rpm` / tar.gz / Homebrew cover most cases.
+- **Network**: outbound HTTPS to `api.telegram.org`. **No inbound ports.**
+- **Disk**: ~30 MiB binary + a growing SQLite audit DB (typical solo use stays under 100 MiB; see `audit_retention` + `audit_max_blob_bytes` for tuning).
 
 ## Install
 
@@ -267,6 +352,26 @@ version + writes `CHANGELOG.md` → merge the PR → it tags
 automatically → `release.yml` runs goreleaser (cross-platform
 binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 
+## Documentation
+
+The full [`docs/`](docs/) tree — every subdirectory has its own `README.md` landing page:
+
+- **[Getting started](docs/getting-started/)** — quickstart, @BotFather walkthrough, finding a Telegram user ID, first install, first commands.
+- **[Configuration](docs/configuration/)** — formats, [full schema with every key + default](docs/configuration/schema.md), environment variables, roles, non-root shells, timeouts, audit-output modes.
+- **[Architecture](docs/architecture/)** — overview, stack, project layout, package graph, runtime model, data flow, concurrency model, design decisions.
+- **[Security](docs/security/)** — threat model, whitelist + RBAC, audit hash chain, seed management, **full danger-matcher regex table**, secret redaction, rate limiting, secrets-at-rest modes.
+- **[Shell](docs/shell/)** — pty vs. exec, fd-3 control pipe, output buffer, signal handling, user-shell drop-privs.
+- **[Audit](docs/audit/)** + **[Database](docs/database/)** — schema, kinds, hash-chain deep dive, retention, all `shellboto audit …` CLI subcommands, backup / restore / vacuum.
+- **[Telegram](docs/telegram/)** — slash commands, callbacks + flows, streaming output, supernotify, file transfer.
+- **[Deployment](docs/deployment/)** — installer, systemd / OpenRC / runit / s6, uninstall, rollback, [production checklist](docs/deployment/production-checklist.md).
+- **[Operations](docs/operations/)** — doctor, logs, heartbeat + idle-reap, user management, updating, monitoring.
+- **[Development](docs/development/)** — prerequisites, build from source, hooks, linting, commit messages, testing, CI, releasing.
+- **[Packaging](docs/packaging/)** — goreleaser, .deb/.rpm, Homebrew, SBOMs, verifying downloads.
+- **[Runbooks](docs/runbooks/)** — bad release, token leak, audit chain broken, DB corruption, shell stuck, disk full.
+- **[Troubleshooting](docs/troubleshooting/)** — installer fails, bot not responding, commands never complete, audit verify fails, error-message lookup.
+- **[Reference](docs/reference/)** — [CLI](docs/reference/cli.md), [Telegram commands](docs/reference/telegram-commands.md), [env vars](docs/reference/env-vars.md), [config keys](docs/reference/config-keys.md), [audit kinds](docs/reference/audit-kinds.md), [danger patterns](docs/reference/danger-patterns.md), [file paths](docs/reference/file-paths.md), [exit codes](docs/reference/exit-codes.md).
+- **[FAQ](docs/faq.md)** — recurring questions (is this safe? why pty? why doesn't `vim` work? Docker? auditing; rotation; …).
+
 ## Known limitations
 
 - Interactive full-screen programs (`vim`, `top`, `less`) won't render usefully — Telegram isn't a terminal. Use `cat`, `tail`, `ps`, `htop -n 1`, etc.
@@ -275,3 +380,46 @@ binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 - `exec bash` / `exec sh` (re-execing the shell in place) wedges boundary detection: the new shell image doesn't inherit our `PROMPT_COMMAND` dispatcher, so the next command never signals completion. The bot's per-command timeout (default 5m) eventually fires and the reaper cleans up. Run `/reset` for an immediate recovery.
 - Telegram's bot-API file limit is 50 MB for both `/get` and uploads.
 - Full command output is stored in the audit DB. If your commands spit out secrets in logs, those secrets end up on disk. Filesystem perms 0600 are the only protection.
+
+## Acknowledgments
+
+shellboto stands on the shoulders of these:
+
+- **[`creack/pty`](https://github.com/creack/pty)** — pty + fork-exec plumbing that makes the persistent-bash-per-user model possible.
+- **[`go-telegram/bot`](https://github.com/go-telegram/bot)** — actively-maintained, typed Telegram Bot API client with first-class context support.
+- **[GORM](https://gorm.io)** + **[`modernc.org/sqlite`](https://gitlab.com/cznic/sqlite)** — pure-Go SQLite (no CGO) keeps the binary static + cross-compile trivial.
+- **[zap](https://pkg.go.dev/go.uber.org/zap)** — structured logging, including the `audit`-named child logger that mirrors every audit event to journald.
+- **[goreleaser](https://goreleaser.com)** + **[release-please](https://github.com/googleapis/release-please)** — merge a PR, get binaries + `.deb` + `.rpm` + Homebrew formula + SBOMs + a GitHub Release automatically.
+- **[lefthook](https://github.com/evilmartians/lefthook)**, **[golangci-lint](https://golangci-lint.run)**, **[gitleaks](https://github.com/gitleaks/gitleaks)**, **[govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)**, **[syft](https://github.com/anchore/syft)** — the quality + release toolchain.
+
+## Security
+
+Please **don't open a public issue** for security reports. Two channels:
+
+- GitHub's [private vulnerability reporting](https://github.com/amiwrpremium/shellboto/security/advisories/new) (preferred — attaches the report to the repo, creates a private advisory).
+- Email **amiwrpremium@gmail.com** directly.
+
+I'll acknowledge within a few days, coordinate a fix, and credit you in the release notes unless you ask otherwise.
+
+## Disclaimer
+
+**shellboto is provided "AS IS", WITHOUT WARRANTY OF ANY KIND**, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, title, and noninfringement. See [LICENSE](./LICENSE) for the full MIT terms.
+
+**You run shellboto entirely at your own risk.** By installing, operating, contributing to, or otherwise using this software, you accept that the author(s) and contributors have **no liability** for any loss, damage, compromise, downtime, or legal exposure arising from its use or misuse — including but not limited to:
+
+- Data loss, data corruption, or unauthorised disclosure (including secrets that pass through command output and land in the audit blob).
+- Compromise of the VPS or any system reachable from it.
+- Financial loss, reputational harm, or regulatory penalties.
+- Any action performed by a whitelisted user you or another admin added — intentional or accidental.
+- Loss of access to your own server, account, or data.
+
+shellboto **deliberately gives whitelisted Telegram users a live shell on your server**, typically running as root. That is the feature, not a bug. You alone are responsible for:
+
+- Securing your Telegram account (2FA, recovery flow, device hygiene).
+- Vetting every user you whitelist; promoting with care; revoking promptly.
+- Protecting `/etc/shellboto/env` (or its `systemd-creds` replacement) and your audit seed.
+- Backups, disaster recovery, and periodic `shellboto audit verify` runs.
+- Patching the host, firewalling it, and otherwise operating the VPS.
+- Understanding the built-in danger matcher's scope and its explicit limitations (see [docs/security/danger-matcher.md](docs/security/danger-matcher.md)).
+
+If you do not accept these terms, do not install or run shellboto.
