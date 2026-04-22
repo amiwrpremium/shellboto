@@ -42,6 +42,7 @@ User management and an audit log (with full captured output per command) are per
 - [Documentation](#documentation)
 - [Known limitations](#known-limitations)
 - [Acknowledgments](#acknowledgments)
+- [Related projects](#related-projects)
 - [Security](#security)
 - [Disclaimer](#disclaimer)
 
@@ -391,6 +392,10 @@ shellboto stands on the shoulders of these:
 - **[zap](https://pkg.go.dev/go.uber.org/zap)** — structured logging, including the `audit`-named child logger that mirrors every audit event to journald.
 - **[goreleaser](https://goreleaser.com)** + **[release-please](https://github.com/googleapis/release-please)** — merge a PR, get binaries + `.deb` + `.rpm` + Homebrew formula + SBOMs + a GitHub Release automatically.
 - **[lefthook](https://github.com/evilmartians/lefthook)**, **[golangci-lint](https://golangci-lint.run)**, **[gitleaks](https://github.com/gitleaks/gitleaks)**, **[govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)**, **[syft](https://github.com/anchore/syft)** — the quality + release toolchain.
+
+## Related projects
+
+- **[macontrol](https://github.com/amiwrpremium/macontrol)** — same idea for macOS. Menu-first Telegram bot that controls your Mac (sound, brightness, wifi, power, screenshots, Shortcuts). Apple Silicon, Go, Homebrew. Where shellboto gives you a Linux shell, macontrol gives you a Mac remote.
 
 ## Security
 
