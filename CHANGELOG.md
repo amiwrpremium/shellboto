@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/amiwrpremium/shellboto/compare/v0.1.2...v0.1.3) (2026-04-22)
+
+
+### Documentation
+
+* **readme:** hero + architecture images, polish pass ([#17](https://github.com/amiwrpremium/shellboto/issues/17)) ([bc47b83](https://github.com/amiwrpremium/shellboto/commit/bc47b83173add0d53e4e2938a89394bfc444b5e4))
+
 ## [0.1.2](https://github.com/amiwrpremium/shellboto/compare/v0.1.1...v0.1.2) (2026-04-22)
 
 
