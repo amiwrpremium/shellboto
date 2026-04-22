@@ -9,6 +9,8 @@
 [![go report](https://goreportcard.com/badge/github.com/amiwrpremium/shellboto)](https://goreportcard.com/report/github.com/amiwrpremium/shellboto)
 [![license](https://img.shields.io/github/license/amiwrpremium/shellboto)](./LICENSE)
 
+> **Status: v0.1.x — early.** Stable for solo-operator use; config keys, CLI flags, and the audit-event schema may still shift before `1.0.0`. Semver goes strict at 1.0 — until then `feat` bumps patch and `feat!` bumps minor per `release-please-config.json`.
+
 <p align="center">
   <img src="docs/assets/hero.png" alt="shellboto — phone controlling a VPS shell" width="100%" />
 </p>
@@ -25,9 +27,11 @@ User management and an audit log (with full captured output per command) are per
 - [Roles](#roles)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Why not just SSH?](#why-not-just-ssh)
 - [User-facing commands](#user-facing-commands)
 - [Build](#build)
 - [CLI subcommands](#cli-subcommands)
+- [Requirements](#requirements)
 - [Install](#install)
 - [Rollback](#rollback)
 - [Uninstall](#uninstall)
@@ -36,6 +40,7 @@ User management and an audit log (with full captured output per command) are per
 - [Audit tamper-evidence](#audit-tamper-evidence)
 - [Development](#development)
 - [Known limitations](#known-limitations)
+- [Acknowledgments](#acknowledgments)
 - [Security](#security)
 - [Disclaimer](#disclaimer)
 
@@ -81,6 +86,17 @@ A Telegram message reaches shellboto, authenticates against the whitelist, dispa
 </p>
 
 Deep dive: [docs/architecture/overview.md](docs/architecture/overview.md).
+
+## Why not just SSH?
+
+- **Audit trail built in.** Every command, exit code, and full output is stored hash-chained in SQLite — you can replay exactly what happened, detect tampering, and prune on a schedule.
+- **Phone-only operation.** 2FA Telegram is your entire prerequisite. No VPN, no SSH client install on a new device, no private key to carry, no bastion host.
+- **Danger-prompt safety net.** 25 built-in regexes flag destructive patterns (`rm -rf /`, `dd of=/dev/sda`, pipe-to-shell, etc.); execution requires tapping ✅ Run within 60s.
+- **Team-shareable without key distribution.** Whitelist is by Telegram ID; separate `user` and `admin` roles with RBAC; promote/demote is two taps instead of rotating an `authorized_keys`.
+- **Live output streaming.** Long-running commands update the same Telegram message as output arrives — no waiting for the full run to finish before seeing the first line.
+- **Per-command containment.** Timeout + output-size caps + auto-SIGKILL on overflow — a runaway process can't OOM the box.
+
+Use SSH when you need full TTY (`vim`, `top`), port forwards, X11, or `scp` of giant files. Use shellboto when you want a traceable, phone-accessible "send command, see result" loop with auditability baked in.
 
 ## User-facing commands
 
@@ -143,6 +159,15 @@ bot as before — the systemd unit is unaffected. Every subcommand accepts
 `-config <path>` (default `/etc/shellboto/config.toml`) and
 `SHELLBOTO_TOKEN` / `SHELLBOTO_SUPERADMIN_ID` must be set the same way
 as for the service.
+
+## Requirements
+
+- **OS**: Linux, `amd64` or `arm64`. macOS binaries cover the CLI subcommands (`audit verify`, `db backup`, etc.); the bot itself is Linux-only (uses pty + Linux-specific `Credential{Uid}` and ioctl syscalls).
+- **Service manager**: systemd preferred. OpenRC / runit / s6 init scripts included under `deploy/init/` for non-systemd hosts.
+- **systemd 250+** — only needed for the optional encrypted-at-rest secrets mode via `deploy/enable-credentials.sh`.
+- **Go 1.26+** — only needed if you build from source. Pre-built `.deb` / `.rpm` / tar.gz / Homebrew cover most cases.
+- **Network**: outbound HTTPS to `api.telegram.org`. **No inbound ports.**
+- **Disk**: ~30 MiB binary + a growing SQLite audit DB (typical solo use stays under 100 MiB; see `audit_retention` + `audit_max_blob_bytes` for tuning).
 
 ## Install
 
@@ -334,6 +359,17 @@ binaries, .deb/.rpm, Homebrew tap push, GitHub release).
 - `exec bash` / `exec sh` (re-execing the shell in place) wedges boundary detection: the new shell image doesn't inherit our `PROMPT_COMMAND` dispatcher, so the next command never signals completion. The bot's per-command timeout (default 5m) eventually fires and the reaper cleans up. Run `/reset` for an immediate recovery.
 - Telegram's bot-API file limit is 50 MB for both `/get` and uploads.
 - Full command output is stored in the audit DB. If your commands spit out secrets in logs, those secrets end up on disk. Filesystem perms 0600 are the only protection.
+
+## Acknowledgments
+
+shellboto stands on the shoulders of these:
+
+- **[`creack/pty`](https://github.com/creack/pty)** — pty + fork-exec plumbing that makes the persistent-bash-per-user model possible.
+- **[`go-telegram/bot`](https://github.com/go-telegram/bot)** — actively-maintained, typed Telegram Bot API client with first-class context support.
+- **[GORM](https://gorm.io)** + **[`modernc.org/sqlite`](https://gitlab.com/cznic/sqlite)** — pure-Go SQLite (no CGO) keeps the binary static + cross-compile trivial.
+- **[zap](https://pkg.go.dev/go.uber.org/zap)** — structured logging, including the `audit`-named child logger that mirrors every audit event to journald.
+- **[goreleaser](https://goreleaser.com)** + **[release-please](https://github.com/googleapis/release-please)** — merge a PR, get binaries + `.deb` + `.rpm` + Homebrew formula + SBOMs + a GitHub Release automatically.
+- **[lefthook](https://github.com/evilmartians/lefthook)**, **[golangci-lint](https://golangci-lint.run)**, **[gitleaks](https://github.com/gitleaks/gitleaks)**, **[govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck)**, **[syft](https://github.com/anchore/syft)** — the quality + release toolchain.
 
 ## Security
 
