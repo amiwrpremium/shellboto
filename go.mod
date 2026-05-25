@@ -7,9 +7,9 @@ toolchain go1.26.2
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/creack/pty v1.1.24
-	github.com/go-telegram/bot v1.20.0
-	go.uber.org/zap v1.27.1
-	golang.org/x/sys v0.43.0
+	github.com/go-telegram/bot v1.21.0
+	go.uber.org/zap v1.28.0
+	golang.org/x/sys v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
